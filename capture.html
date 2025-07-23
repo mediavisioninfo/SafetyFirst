@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Capture with Add More</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        #video {
+            width: 400px;
+            height: 300px;
+            border: 1px solid black;
+        }
+        .image-container {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .image-container img {
+            width: 150px;
+            height: 120px;
+            border: 2px solid #1A7CBC;
+        }
+        .button-container {
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #1A7CBC;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #145a85;
+        }
+    </style>
+</head>
+<body>
+    <h1>Capture Images from Webcam</h1>
+
+    <video id="video" autoplay></video>
+    <br>
+    <div class="button-container">
+        <button id="capture">Capture</button>
+        <button id="add-more">Add More</button>
+    </div>
+    
+    <div class="image-container" id="captured-images"></div>
+
+    <script>
+        const video = document.getElementById('video');
+        const captureButton = document.getElementById('capture');
+        const addMoreButton = document.getElementById('add-more');
+        const imageContainer = document.getElementById('captured-images');
+
+        // Access webcam video
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then((stream) => {
+                video.srcObject = stream;
+            })
+            .catch((err) => {
+                console.error("Error accessing webcam: ", err);
+            });
+
+        // Capture a frame from the video and add to the image container
+        captureButton.addEventListener('click', () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const img = document.createElement('img');
+            img.src = canvas.toDataURL('image/png');
+            imageContainer.appendChild(img);
+        });
+
+        // Add more functionality (essentially refreshes the video stream)
+        addMoreButton.addEventListener('click', () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+        });
+    </script>
+</body>
+</html>
