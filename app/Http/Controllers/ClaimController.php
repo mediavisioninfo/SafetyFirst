@@ -975,7 +975,6 @@ class ClaimController extends Controller
             Session::put("otp_$claimId", $otp);
             Session::put("otp_claim_id", $claimId);
 
-            dd($otp);
             // Send OTP via SMS
             $mobile = $claim->mobile;
             if (substr($mobile, 0, 3) === '+91') $mobile = substr($mobile, 3);
@@ -987,7 +986,8 @@ class ClaimController extends Controller
             $senderId = env('SMSCOUNTRY_SENDERID');
             $auth = base64_encode("$authKey:$authToken");
 
-            $message = "Dear Customer, Your One-Time Password (OTP) to access the claim document upload portal is $otp. This OTP is valid for 10 minutes from the time of issuance. For your security, please do not share this code with anyone. Regards SafetyFirst";
+            // $message = "Dear Customer, Your One-Time Password (OTP) to access the claim document upload portal is $otp. This OTP is valid for 10 minutes from the time of issuance. For your security, please do not share this code with anyone. Regards SafetyFirst";
+            $message = "Dear Customer, Your One-Time Password (OTP) to access the claim please upload documents in SafetyFirst portal is $otp.This OTP is valid for 10 minutes. For your security, please do not share this code with anyone. Regards SafetyFirst.";
 
             Http::withHeaders([
                 'Authorization' => "Basic $auth",
@@ -1000,7 +1000,7 @@ class ClaimController extends Controller
                 "Is_Unicode" => false
             ]);
 
-            return view('claims.enter_otp', compact('claimId', 'encryptedId'));
+            return view('claim.enter_otp', compact('claimId', 'encryptedId'));
 
         } catch (\Exception $e) {
             return abort(404);
@@ -1015,7 +1015,7 @@ class ClaimController extends Controller
 
         if ($enteredOtp == $sessionOtp) {
             Session::put("otp_verified_$claimId", true);
-            return redirect()->route('claim.upload.documents', ['id' => Crypt::encrypt($claimId)]);
+            return redirect()->route('claim.upload', ['id' => Crypt::encrypt($claimId)]);
         } else {
             return redirect()->back()->with('error', 'Invalid OTP. Please try again.');
         }

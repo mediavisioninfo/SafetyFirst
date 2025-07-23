@@ -1,7 +1,7 @@
 @php
     $users=\Auth::user();
    $languages=\App\Models\Custom::languages();
-   $userLang=\Auth::user()->lang;
+   $userLang = \Auth::check() ? \Auth::user()->lang : 'en'; // fallback to 'en' or any default language
    $profile=asset(Storage::url('upload/profile'));
 @endphp
     <!-- Header Start-->
