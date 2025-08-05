@@ -79,16 +79,16 @@ class UserController extends Controller
     {
         if (\Auth::user()->can('create user')) {
             if (\Auth::user()->type == 'super admin') {
-                $validator = \Validator::make(
-                    $request->all(), [
-                        'name' => 'required',
-                        'email' => 'required|email|unique:users',
-                        'password' => 'required|min:6',
-                    ]
-                );
+                $validator = \Validator::make($request->all(), [
+                    'name' => 'required',
+                    'email' => 'required|email|unique:users',
+                    'password' => 'required|min:6',
+                    'company_id' => 'required|array',
+                    'company_id.*' => 'exists:insurance_companies,id',
+                ]);
+
                 if ($validator->fails()) {
                     $messages = $validator->getMessageBag();
-
                     return redirect()->back()->with('error', $messages->first());
                 }
 
@@ -98,28 +98,31 @@ class UserController extends Controller
                 $user->password = \Hash::make($request->password);
                 $user->phone_number = $request->phone_number;
                 $user->type = 'owner';
+                $user->company_id = implode(',', $request->company_id);
                 $user->lang = 'english';
                 $user->subscription = 1;
                 $user->parent_id = parentId();
                 $user->save();
+
                 $userRole = Role::findByName('owner');
                 $user->assignRole($userRole);
+
                 defaultCustomerCreate($user->id);
                 defaultAgentCreate($user->id);
+
                 return redirect()->route('users.index')->with('success', __('User successfully created.'));
             } else {
+                $validator = \Validator::make($request->all(), [
+                    'name' => 'required',
+                    'email' => 'required|email|unique:users',
+                    'password' => 'required|min:6',
+                    'role' => 'required',
+                    'company_id' => 'required|array',
+                    'company_id.*' => 'exists:insurance_companies,id',
+                ]);
 
-                $validator = \Validator::make(
-                    $request->all(), [
-                        'name' => 'required',
-                        'email' => 'required|email|unique:users',
-                        'password' => 'required|min:6',
-                        'role' => 'required',
-                    ]
-                );
                 if ($validator->fails()) {
                     $messages = $validator->getMessageBag();
-
                     return redirect()->back()->with('error', $messages->first());
                 }
 
@@ -127,22 +130,27 @@ class UserController extends Controller
                 $authUser = \App\Models\User::find($ids);
                 $totalUser = $authUser->totalUser();
                 $subscription = Subscription::find($authUser->subscription);
+
                 // if ($totalUser >= $subscription->user_limit && $subscription->user_limit != 0) {
                 //     return redirect()->back()->with('error', __('Your user limit is over, please upgrade your subscription.'));
                 // }
+
                 $userRole = Role::findById($request->role);
+
                 $user = new User();
                 $user->name = $request->name;
                 $user->email = $request->email;
                 $user->phone_number = $request->phone_number;
                 $user->password = \Hash::make($request->password);
                 $user->type = $userRole->name;
-                $user->company_id  = $request->company_id;
+                $user->company_id = implode(',', $request->company_id); // Save as 1,2,3
                 $user->profile = 'avatar.png';
                 $user->lang = 'english';
                 $user->parent_id = parentId();
                 $user->save();
+
                 $user->assignRole($userRole);
+
                 return redirect()->route('users.index')->with('success', __('User successfully created.'));
             }
         } else {
@@ -170,50 +178,52 @@ class UserController extends Controller
     public function update(Request $request, $id)
     {
         if (\Auth::user()->can('edit user')) {
-            if (\Auth::user()->type == 'super admin') {
-                $user = User::findOrFail($id);
+            $user = User::findOrFail($id);
 
-                $validator = \Validator::make(
-                    $request->all(), [
-                        'name' => 'required',
-                        'email' => 'required|email|unique:users,email,' . $id,
-                    ]
-                );
+            if (\Auth::user()->type == 'super admin') {
+                $validator = \Validator::make($request->all(), [
+                    'name' => 'required',
+                    'email' => 'required|email|unique:users,email,' . $id,
+                    'company_id' => 'required|array',
+                    'company_id.*' => 'exists:insurance_companies,id',
+                ]);
+
                 if ($validator->fails()) {
                     $messages = $validator->getMessageBag();
-
                     return redirect()->back()->with('error', $messages->first());
                 }
 
-                $userData = $request->all();
-                $user->fill($userData)->save();
+                $user->name = $request->name;
+                $user->email = $request->email;
+                $user->phone_number = $request->phone_number;
+                $user->company_id = implode(',', $request->company_id);
+                $user->save();
 
                 return redirect()->route('users.index')->with('success', 'User successfully updated.');
             } else {
+                $validator = \Validator::make($request->all(), [
+                    'name' => 'required',
+                    'email' => 'required|email|unique:users,email,' . $id,
+                    'role' => 'required',
+                    'company_id' => 'required|array',
+                    'company_id.*' => 'exists:insurance_companies,id',
+                ]);
 
-
-                $validator = \Validator::make(
-                    $request->all(), [
-                        'name' => 'required',
-                        'email' => 'required|email|unique:users,email,' . $id,
-                        'role' => 'required',
-                    ]
-                );
                 if ($validator->fails()) {
                     $messages = $validator->getMessageBag();
-
                     return redirect()->back()->with('error', $messages->first());
                 }
 
                 $userRole = Role::findById($request->role);
-                $user = User::findOrFail($id);
+
                 $user->name = $request->name;
                 $user->email = $request->email;
                 $user->phone_number = $request->phone_number;
                 $user->type = $userRole->name;
-                $user->company_id  = $request->company_id;
+                $user->company_id = implode(',', $request->company_id); // Save as "1,2,3"
                 $user->save();
                 $user->assignRole($userRole);
+
                 return redirect()->route('users.index')->with('success', 'User successfully updated.');
             }
         } else {

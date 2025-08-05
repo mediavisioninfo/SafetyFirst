@@ -14,7 +14,7 @@
             </div>
         </div>
         <div class="form-group col-md-6 col-lg-6">
-            {{Form::label('date',__('Date'),array('class'=>'form-label'))}}
+            {{Form::label('date',__('Intimation Date'),array('class'=>'form-label'))}}
             {{Form::date('date',$claim->date,array('class'=>'form-control'))}}
         </div>
 

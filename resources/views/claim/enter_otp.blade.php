@@ -2,6 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-store" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <title>Verify OTP</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -44,5 +47,25 @@
 
     <!-- Optional Bootstrap JS for form styling -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- ✅ Force expire OTP session on page unload/back -->
+    <!-- <script>
+        // If user presses back button and page is cached, reload the page
+        window.addEventListener("pageshow", function (event) {
+            if (event.persisted || performance.getEntriesByType("navigation")[0].type === "back_forward") {
+                window.location.reload();
+            }
+        });
+
+        function expireOtpSession() {
+            navigator.sendBeacon("{{ route('claim.otp.expire', ['claim_id' => $claimId]) }}");
+        }
+
+        // Trigger on tab close, refresh, or navigation away
+        window.addEventListener('beforeunload', expireOtpSession);
+        // Trigger on back button
+        window.addEventListener('popstate', expireOtpSession);
+    </script> -->
 </body>
+
 </html>

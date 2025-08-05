@@ -289,6 +289,9 @@ Route::resource('tax', TaxController::class)->middleware(
 //-------------------------------Claim Upload Document-------------------------
 Route::get('/claim/upload-otp/{id}', [ClaimController::class, 'showUploadOtpForm'])->name('claim.upload.otp');
 Route::post('/claim/verify-otp', [ClaimController::class, 'verifyOtp'])->name('claim.verifyOtp');
+Route::post('/claim/otp-expire/{claim_id}', [ClaimController::class, 'expireOtpSession'])->name('claim.otp.expire');
+Route::post('/claim/check-otp-session', [ClaimController::class, 'checkOtpSession'])->name('claim.check.otp');
+
 Route::get('claim/upload/{id}', [ClaimController::class, 'uploadForm'])->name('claim.upload');
 Route::get('/s', function (Request $request) {
     // Get the raw query string like "2Xd10L"
@@ -311,7 +314,8 @@ Route::get('/claims/{claim}/photos/pdf',[ClaimController::class, 'downloadPhotos
 
 Route::get('/get-cities/{state}', [ClaimController::class, 'getCities']);
 
-Route::get('/secure-image/{claimHash}/{folderHash}/{filename}', [ClaimController::class, 'showImage'])->name('secure.image');
+Route::get('/secure-image/{claimHash}/{folderHash}/{folderCode}/{filename}', [ClaimController::class, 'showImage'])->name('secure.image');
+
 
 Route::post('/upload-document', [ClaimController::class, 'uploadDocument'])->name('upload.document');
 Route::get('/claim/report/{id}', [ClaimController::class, 'generateReport'])->name('claim.report');

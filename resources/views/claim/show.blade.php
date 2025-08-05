@@ -2475,20 +2475,120 @@
                                     @if ($claim->photo_files)
                                         <div class="col-12 mt-20">
                                             <div class="detail-group">
-                                                <h6>{{ __('Original Images with Geotag and Capture Time') }}</h6>
+                                                <h5>{{ __('Vechicle Damage Images with Geotag and Capture Time') }}</h5>
                                                 <div class="row mt-3">
                                                     <div class="col-12">
                                                         <div class="row">
                                                             @php
                                                                 $photoFiles = json_decode($claim->photo_files, true);
                                                                 $claimHash = md5($claim->id);
-                                                                $folderHash = md5('photos');
+                                                                $folderCode = getFolderCode('vehicle');
                                                             @endphp
 
                                                             @foreach ($photoFiles as $photo)
                                                                 @php
                                                                     $filename = $photo['filename'];
-                                                                    $imageUrl = route('secure.image', [$claimHash, $folderHash, $filename]);
+                                                                    $imageUrl = route('secure.image', [$claimHash, 'PHX', $folderCode , $filename]);
+                                                                @endphp
+
+                                                                <div class="col-12 col-md-6 col-lg-4 mb-4">
+                                                                    <div class="card">
+                                                                        <a href="{{ $imageUrl }}" target="_blank" class="text-decoration-none">
+                                                                            <img src="{{ $imageUrl }}" class="card-img-top" alt="{{ $filename }}">
+                                                                        </a>
+                                                                        <div class="card-body">
+                                                                            <p class="card-text">
+                                                                                <strong>Capture Time:</strong><br>
+                                                                                {{ \Carbon\Carbon::parse($photo['captureTime'])->format('Y-m-d H:i:s') }}
+                                                                            </p>
+
+                                                                            @if (isset($photo['geotag']) && $photo['geotag'] !== null)
+                                                                                <p class="card-text">
+                                                                                    <strong>Location:</strong><br>
+                                                                                    Lat: {{ $photo['geotag']['latitude'] }}<br>
+                                                                                    Long: {{ $photo['geotag']['longitude'] }}
+                                                                                </p>
+                                                                                <a href="https://www.google.com/maps/search/?api=1&query={{ $photo['geotag']['latitude'] }},{{ $photo['geotag']['longitude'] }}"
+                                                                                target="_blank" class="btn btn-sm btn-primary">
+                                                                                    View on Map
+                                                                                </a>
+                                                                            @else
+                                                                                <p class="card-text text-muted">No location data available</p>
+                                                                            @endif
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            @endforeach
+
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="detail-group">
+                                                <h5>{{ __('Under Repair Images with Geotag and Capture Time') }}</h5>
+                                                <div class="row mt-3">
+                                                    <div class="col-12">
+                                                        <div class="row">
+                                                            @php
+                                                                $underPhotoFiles = json_decode($claim->under_repair_photo_files, true);
+                                                                $claimHash = md5($claim->id);
+                                                                $folderCode = getFolderCode('under_repair');
+                                                            @endphp
+
+                                                            @foreach ($underPhotoFiles as $photo)
+                                                                @php
+                                                                    $filename = $photo['filename'];
+                                                                    $imageUrl = route('secure.image', [$claimHash, 'PHX', $folderCode , $filename]);
+                                                                @endphp
+
+                                                                <div class="col-12 col-md-6 col-lg-4 mb-4">
+                                                                    <div class="card">
+                                                                        <a href="{{ $imageUrl }}" target="_blank" class="text-decoration-none">
+                                                                            <img src="{{ $imageUrl }}" class="card-img-top" alt="{{ $filename }}">
+                                                                        </a>
+                                                                        <div class="card-body">
+                                                                            <p class="card-text">
+                                                                                <strong>Capture Time:</strong><br>
+                                                                                {{ \Carbon\Carbon::parse($photo['captureTime'])->format('Y-m-d H:i:s') }}
+                                                                            </p>
+
+                                                                            @if (isset($photo['geotag']) && $photo['geotag'] !== null)
+                                                                                <p class="card-text">
+                                                                                    <strong>Location:</strong><br>
+                                                                                    Lat: {{ $photo['geotag']['latitude'] }}<br>
+                                                                                    Long: {{ $photo['geotag']['longitude'] }}
+                                                                                </p>
+                                                                                <a href="https://www.google.com/maps/search/?api=1&query={{ $photo['geotag']['latitude'] }},{{ $photo['geotag']['longitude'] }}"
+                                                                                target="_blank" class="btn btn-sm btn-primary">
+                                                                                    View on Map
+                                                                                </a>
+                                                                            @else
+                                                                                <p class="card-text text-muted">No location data available</p>
+                                                                            @endif
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            @endforeach
+
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="detail-group">
+                                                <h5>{{ __('Final Images with Geotag and Capture Time') }}</h5>
+                                                <div class="row mt-3">
+                                                    <div class="col-12">
+                                                        <div class="row">
+                                                            @php
+                                                                $finalPhotoFiles = json_decode($claim->final_photo_files, true);
+                                                                $claimHash = md5($claim->id);
+                                                                $folderCode = getFolderCode('final');
+                                                            @endphp
+
+                                                            @foreach ($finalPhotoFiles as $photo)
+                                                                @php
+                                                                    $filename = $photo['filename'];
+                                                                    $imageUrl = route('secure.image', [$claimHash, 'PHX', $folderCode , $filename]);
                                                                 @endphp
 
                                                                 <div class="col-12 col-md-6 col-lg-4 mb-4">

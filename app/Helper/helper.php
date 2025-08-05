@@ -586,6 +586,36 @@ if (!function_exists('userLoggedHistory')) {
         }
         
     }
+
+    if (!function_exists('getFolderCode')) {
+        function getFolderCode($documentType)
+        {
+            $folderMap = [
+                'number_plate'        => 'NPX',
+                'aadhaar'             => 'AAX',
+                'pan_card'            => 'PNX',
+                'tax_receipt'         => 'TXP',
+                'sales_invoice'       => 'SIV',
+                'dl'                  => 'DLX',
+                'other_dl'            => 'ODLX',
+                'rcbook'              => 'RCB',
+                'insurance'           => 'INC',
+                'claimform'           => 'CMF',
+                'claimintimation'     => 'CMI',
+                'satisfactionvoucher' => 'SFV',
+                'fir'                 => 'FRC',
+                'paymentreceipt'      => 'PYR',
+                'finalbill'           => 'FBL',
+                'video'               => 'VDX',
+                'vehicle'             => 'VPH',
+                'under_repair'        => 'URP',
+                'final'               => 'FIP',
+            ];
+
+            return $folderMap[$documentType] ?? 'unknown';
+        }
+    }
+
     
     
 

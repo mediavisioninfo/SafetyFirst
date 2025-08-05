@@ -74,11 +74,14 @@ class ClaimController extends Controller
         if (\Auth::user()->can('manage claim')) {
 
             $user = \Auth::user();
-            
             // Base query depending on user type
             $query = Claim::where('parent_id', parentId());
 
             if ($user->type === 'Operator') {
+                $query->where('user_id', $user->id);
+            }
+
+            if ($user->type === 'workshop') {
                 $query->where('user_id', $user->id);
             }
             
@@ -146,18 +149,22 @@ class ClaimController extends Controller
             // GET FINAL CLAIMS
             $claims = $query->orderBy('created_at', 'desc')->get();
 
+            
+
             // GET INSURANCE DETAILS ONLY FOR THESE CLAIMS
             // $insuranceDetail = InsuranceDetail::whereIn('claim_id', $claims->pluck('id'))->get();
 
             $insuranceDetail = InsuranceDetail::whereIn('claim_id', $claims->pluck('id'))->get()->keyBy('claim_id');
 
             // dd($insuranceDetail);
-             $states = State::pluck('name', 'id');
+            $states = State::pluck('name', 'id');
             //  dd($states);
+            $usersType = User::where('type', 'manager')->get();
+
             //FEES BILL DATA
             $feesBillData = ProfessionalFee::whereIn('claim_id', $claims->pluck('id'))->get()->keyBy('claim_id');
             
-            return view('claim.index', compact('claims','feesBillData','insuranceDetail','states'));
+            return view('claim.index', compact('claims','feesBillData','insuranceDetail','states','usersType'));
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
@@ -226,6 +233,7 @@ class ClaimController extends Controller
             $claim->ensurance_email = $request->ensurance_email;
             $claim->state_id = $request->state_id;
             $claim->city_id = $request->city_id;
+            $claim->insurance_company_id = $request->insurance_company_id;
 
             $claim->save();
             $this->logClaimAction(
@@ -266,45 +274,58 @@ class ClaimController extends Controller
            } catch (\Exception $e) {
            
            }
-            // Send SMS if SMSCountry credentials are set
             $authKey = env('SMSCOUNTRY_AUTHKEY');
             $authToken = env('SMSCOUNTRY_AUTHTOKEN');
             $senderId = env('SMSCOUNTRY_SENDERID');
 
-            $mobile = $request->mobile;
+            $auth = base64_encode("$authKey:$authToken");
 
+            // Define both numbers
+            $numbers = [];
+
+            // Normalize and add claim user mobile
+            $mobile = $request->mobile;
             if (substr($mobile, 0, 3) === '+91') {
                 $mobile = substr($mobile, 3);
             } elseif (substr($mobile, 0, 1) === '0') {
                 $mobile = substr($mobile, 1);
             }
-            $mobile = '91' . $mobile;
+            $numbers[] = '91' . $mobile;
 
-            $auth = base64_encode("$authKey:$authToken");
+            // Normalize and add workshop mobile number
+            $workshopMobile = $request->workshop_mobile_number;
+            if (substr($workshopMobile, 0, 3) === '+91') {
+                $workshopMobile = substr($workshopMobile, 3);
+            } elseif (substr($workshopMobile, 0, 1) === '0') {
+                $workshopMobile = substr($workshopMobile, 1);
+            }
+            $numbers[] = '91' . $workshopMobile;
 
-            $data = [
-                "Text" => "Dear ABC, To process your Car insurance claim -Claim No: $request->claim_id, please upload the required documents at: $uploadLink For help, call 080-62965696. Regards SafetyFirst" ,
-                "Number" => $mobile,  // ✅ Correct key
-                "SenderId" => $senderId,
-                "TemplateId" => "1707174703017862364",
-                "Is_Unicode" => false
-            ];
+            // Send SMS to each number
+            foreach ($numbers as $number) {
+                $data = [
+                    "Text" => "Dear ABC, To process your Car insurance claim -Claim No: $request->claim_id, please upload the required documents at: $uploadLink For help, call 080-62965696. Regards SafetyFirst",
+                    "Number" => $number,
+                    "SenderId" => $senderId,
+                    "TemplateId" => "1707174703017862364",
+                    "Is_Unicode" => false
+                ];
 
-            $response = Http::withHeaders([
-                'Authorization' => "Basic $auth",
-                'Content-Type' => 'application/json'
-            ])->post("https://restapi.smscountry.com/v0.1/Accounts/$authKey/SMSes", $data);
+                $response = Http::withHeaders([
+                    'Authorization' => "Basic $auth",
+                    'Content-Type' => 'application/json'
+                ])->post("https://restapi.smscountry.com/v0.1/Accounts/$authKey/SMSes", $data);
 
-            $responseData = $response->json();
+                $responseData = $response->json();
 
-            if ($responseData['Success']) {
-                \Log::info("SMS successfully queued", [
-                    'uuid' => $responseData['MessageUUID'],
-                    'mobile' => $mobile
-                ]);
-            }else {
-                \Log::error('SMSCountry failed', ['response' => $response->body()]);
-                // Optionally, you can also return an error message or handle failures
+                if (!empty($responseData['Success'])) {
+                    \Log::info("SMS successfully queued", [
+                        'uuid' => $responseData['MessageUUID'],
+                        'mobile' => $number
+                    ]);
+                } else {
+                    \Log::error('SMSCountry failed', ['mobile' => $number, 'response' => $response->body()]);
+                }
             }
         
         return redirect()->route('claim.show', Crypt::encrypt($claim->id))->with('success', __('Claim successfully created.'));
@@ -480,7 +501,8 @@ class ClaimController extends Controller
             }
     
             // Process Insurance details using the extractor
-            $insurance = $claim->insurances;
+            //commented by tanuja 24-07-25
+            /*$insurance = $claim->insurances;
             if($claim->ocr_results != null) {
                 $insuranceExtractor = new InsuranceDetailExtractor($claim->ocr_results);
                 $insuranceDetails = $insuranceExtractor->extract(); 
@@ -519,8 +541,50 @@ class ClaimController extends Controller
                 $insuranceDetail->save();
             } else {
                 $insuranceDetail = $existingInsuranceDetail;
+            }*/
+
+            $insurance = $claim->insurances;
+            $insuranceDetail = InsuranceDetail::where('claim_id', $claim->id)->first();
+
+            // If no insurance detail and OCR results exist, extract and save
+            if (!$insuranceDetail && $claim->ocr_results != null) {
+                $insuranceExtractor = new InsuranceDetailExtractor($claim->ocr_results);
+                $insuranceDetails = $insuranceExtractor->extract();
+
+                $insuranceDetailData = [
+                    'policy_number' => $insuranceDetails['policy_number'] ?? 'N/A',
+                    'previous_policy_number' => $insuranceDetails['previous_policy_number'] ?? '',
+                    'insured_name' => $insuranceDetails['insured_name'] ?? 'N/A',
+                    'insured_address' => $insuranceDetails['insured_address'] ?? '',
+                    'insured_declared_value' => $insuranceDetails['insured_declared_value'] ?? '0',
+                    'issuing_office_address_code' => $insuranceDetails['issuing_office_address_code'] ?? '',
+                    'issuing_office_address' => $insuranceDetails['issuing_office_address'] ?? '',
+                    'occupation' => $insuranceDetails['occupation'] ?? '',
+                    'mobile' => $insuranceDetails['mobile'] ?? '',
+                    'vehicle' => $insuranceDetails['vehicle'] ?? 'N/A',
+                    'engine_no' => $insuranceDetails['engine_no'] ?? '',
+                    'chassis_no' => $insuranceDetails['chassis_no'] ?? '',
+                    'make' => $insuranceDetails['make'] ?? '',
+                    'model' => $insuranceDetails['model'] ?? '',
+                    'year_of_manufacture' => $insuranceDetails['year_of_manufacture'] ?? '',
+                    'cubic_capacity' => $insuranceDetails['cubic_capacity'] ?? 0,
+                    'seating_capacity' => $insuranceDetails['seating_capacity'] ?? 0,
+                    'no_claim_bonus_percentage' => $insuranceDetails['no_claim_bonus_percentage'] ?? 0,
+                    'nil_depreciation' => $insuranceDetails['nil_depreciation'] ?? 'No',
+                    'additional_towing_charges' => $insuranceDetails['additional_towing_charges'] ?? 0,
+                    'policy_type' => $insuranceDetails['policy_type'] ?? 'Standalone Policy',
+                    'zero_dep' => $insuranceDetails['zero_dep'] ?? 'No',
+                ];
+
+                $insuranceDetail = new InsuranceDetail();
+                $insuranceDetail->claim_id = $claim->id;
+                $insuranceDetail->fill($insuranceDetailData);
+                $insuranceDetail->save();
             }
-    
+
+            // Fallback: if still null, use empty model to avoid null errors in Blade
+            $insuranceDetail = $insuranceDetail ?? new InsuranceDetail();
+            
             // Process DL details using the extractor for the OCR results
             $dlExtractor = new DrivingLicenseDetailExtractor($claim->ocr_results);  // Assuming DL extractor exists
             $dlDetails = $dlExtractor->extract();
@@ -838,6 +902,7 @@ class ClaimController extends Controller
             $claim->ensurance_email = $request->ensurance_email;
             $claim->state_id = $request->state_id;
             $claim->city_id = $request->city_id;
+            $claim->insurance_company_id = $request->insurance_company_id;
 
             $claim->save();
             $this->logClaimAction(
@@ -1020,10 +1085,38 @@ class ClaimController extends Controller
             return redirect()->back()->with('error', 'Invalid OTP. Please try again.');
         }
     }
+    public function expireOtpSession($claimId)
+    {
+        Session::forget("otp_$claimId");
+        Session::forget("otp_claim_id");
+        Session::forget("otp_generated_time_$claimId");
+        Session::forget("otp_verified_$claimId");
+
+        return response()->noContent(); // 204
+    }
+
+    // public function uploadForm($id)
+    // {
+    //     //07-feb-2025 add by tanuja
+    //     $claimId = decrypt($id);
+
+    //     if (!Session::get("otp_verified_$claimId")) {
+    //         return redirect()->route('claim.upload.otp', ['id' => $id])
+    //                         ->with('error', 'Please verify OTP first.');
+    //     }
+
+    //     // ✅ Clear OTP session after successful upload
+    //     Session::forget("otp_verified_$claimId");
+    //     Session::forget("otp_$claimId");
+    //     Session::forget("otp_claim_id");
+
+    //     $claimData = Claim::select('*')->where('id',$claimId)->get()->toArray();
+    //     $user = \Auth::user();
+    //     return view('claim.upload', compact('claimId','user','claimData'));
+    // }
 
     public function uploadForm($id)
     {
-        //07-feb-2025 add by tanuja
         $claimId = decrypt($id);
 
         if (!Session::get("otp_verified_$claimId")) {
@@ -1031,10 +1124,20 @@ class ClaimController extends Controller
                             ->with('error', 'Please verify OTP first.');
         }
 
-        $claimData = Claim::select('*')->where('id',$claimId)->get()->toArray();
+        //Clear OTP session after successful access
+        // Session::forget("otp_verified_$claimId");
+        // Session::forget("otp_$claimId");
+        // Session::forget("otp_claim_id");
+
+        $claimData = Claim::select('*')->where('id', $claimId)->get()->toArray();
         $user = \Auth::user();
-        return view('claim.upload', compact('claimId','user','claimData'));
+
+        // ✅ Encrypt again to use in Blade
+        $encryptedId = encrypt($claimId);
+
+        return view('claim.upload', compact('claimId', 'user', 'claimData', 'encryptedId'));
     }
+
 
 
     public function uploadDocument(Request $request)
@@ -1077,67 +1180,35 @@ class ClaimController extends Controller
                 $uploadedFiles = $this->handlePhotoUploadWithGeotag($request->file('files'), $request->input('geotags'), $request->input('captureTimes'), $claim->id,  $documentType);
             } else if($documentType === 'number_plate'){
                 $uploadedFiles = $this->handleNumberPlateUploadWithGeotag($request->file('files'), $request->input('geotag'), $request->input('captureTime'), $claim->id);
-            }else if($documentType === 'aadhaar'){
-                $uploadedFiles = $this->handleFileUpload($request->file('files'), $documentType, $claim->id);
-
-                // ✅ Run OCR on the first Aadhaar image
-                $aadhaarImagePath = storage_path('app/public/upload/document/claim-' . $claim->id . '/aadhaar/' . $uploadedFiles[0]);
-                $ocrText = (new TesseractOCR($aadhaarImagePath))->run();
-
-                // dd($ocrText);
-                // ✅ Extract Aadhaar number (format: 1234 5678 9123)
-                preg_match('/\b[0-9]{4}\s[0-9]{4}\s[0-9]{4}\b/', $ocrText, $aadhaarNumberMatches);
-                $aadhaarNumber = $aadhaarNumberMatches[0] ?? null;
-
-                // ✅ Extract Aadhaar name (basic assumption: line after "Name" or similar)
-                // preg_match('/(?<=Name|NAME|Nmae)[^\n]{3,}/i', $ocrText, $nameMatches);
-                // $aadhaarName = $nameMatches[0] ?? null;
-                $lines = explode("\n", $ocrText);
-                $aadhaarName = null;
-
-                // Clean lines: remove empty, trim space
-                $lines = array_values(array_filter(array_map('trim', $lines)));
-
-                foreach ($lines as $index => $line) {
-                    // Look for a line containing DOB (in English or Hindi)
-                    if (stripos($line, 'DOB') !== false && isset($lines[$index - 1])) {
-                        // Check if the previous line looks like a name (alphabetic)
-                        $potentialName = $lines[$index - 1];
-
-                        // Skip Hindi lines or lines with special chars
-                        if (preg_match('/^[a-zA-Z\s.]+$/', $potentialName)) {
-                            $aadhaarName = trim($potentialName);
-                            break;
-                        }
-
-                        // Fallback: look further up
-                        for ($i = $index - 2; $i >= 0; $i--) {
-                            if (preg_match('/^[a-zA-Z\s.]+$/', $lines[$i])) {
-                                $aadhaarName = trim($lines[$i]);
-                                break 2;
-                            }
-                        }
-                    }
-                }
-
-                // Fallback if still not found
-                if (!$aadhaarName) {
-                    preg_match('/^[A-Z][a-z]+\s+[A-Z][a-z]+/', $ocrText, $nameMatches); // Basic two-word name
-                    $aadhaarName = $nameMatches[0] ?? null;
-                }
-
-                // ✅ Save to claim table if both are found
-                if ($aadhaarNumber || $aadhaarName) {
-                    $claim->aadhaar_number = $aadhaarNumber;
-                    $claim->aadhaar_name = $aadhaarName;
-                    $claim->save();
-                }
-            }
-            else {
+            }else {
                 $uploadedFiles = $this->handleFileUpload($request->file('files'), $documentType, $claim->id);
             }
+
     
             $this->updateClaimWithUploadedFiles($claim, $documentType, $uploadedFiles);
+
+            if ($documentType === 'aadhaar' && !empty($uploadedFiles)) {
+                $claimHash  = md5($claim->id);
+                $folderCode = $this->getFolderCode($documentType);
+                $aadhaarFilePath = config('constant.claim_upload_path') . "/$claimHash/{$folderCode}/" . $uploadedFiles[0];
+
+                $decryptedPath = storage_path("app/tmp_aadhaar_ocr.jpg");
+                $processedPath = storage_path("app/tmp_aadhaar_processed.jpg");
+
+                try {
+                    file_put_contents($decryptedPath, Crypt::decrypt(file_get_contents($aadhaarFilePath)));
+                    $this->preprocessImage($decryptedPath, $processedPath);
+
+                    // ⬇️ Call improved method that also saves
+                    $this->extractAadhaarDetailsAndSave($claim, $processedPath);
+
+                } catch (\Exception $e) {
+                    Log::error("Failed to extract Aadhaar info: " . $e->getMessage());
+                } finally {
+                    if (file_exists($decryptedPath)) unlink($decryptedPath);
+                    if (file_exists($processedPath)) unlink($processedPath);
+                }
+            }
             
             // Check if all documents are uploaded and update status if necessary
             if ($this->allDocumentsUploaded($claim)) {
@@ -1162,6 +1233,71 @@ class ClaimController extends Controller
             return response()->json(['error' => 'An error occurred during upload'], 500);
         }
     }
+
+    private function preprocessImage($inputPath, $outputPath)
+    {
+        $image = imagecreatefromjpeg($inputPath);
+        imagefilter($image, IMG_FILTER_GRAYSCALE);
+        imagefilter($image, IMG_FILTER_CONTRAST, -50);
+        imagejpeg($image, $outputPath);
+        imagedestroy($image);
+    }
+
+    private function extractAadhaarDetailsAndSave($claim, $imagePath)
+    {
+        try {
+            $ocrText = (new \thiagoalessio\TesseractOCR\TesseractOCR($imagePath))
+                ->executable('C:\\Program Files\\Tesseract-OCR\\tesseract.exe') // Change path if needed
+                ->lang('eng')
+                ->run();
+
+            Log::info("OCR Text:\n" . $ocrText);
+
+            // ✅ Extract Aadhaar number
+            preg_match('/\b[0-9]{4}\s[0-9]{4}\s[0-9]{4}\b/', $ocrText, $aadhaarNumberMatches);
+            $aadhaarNumber = $aadhaarNumberMatches[0] ?? null;
+
+            // ✅ Extract Aadhaar name using line before DOB
+            $lines = array_values(array_filter(array_map('trim', explode("\n", $ocrText))));
+            $aadhaarName = null;
+
+            foreach ($lines as $index => $line) {
+                if (stripos($line, 'DOB') !== false && isset($lines[$index - 1])) {
+                    $potentialName = $lines[$index - 1];
+
+                    if (preg_match('/^[a-zA-Z\s.]+$/', $potentialName)) {
+                        $aadhaarName = trim($potentialName);
+                        break;
+                    }
+
+                    // Fallback upward scan
+                    for ($i = $index - 2; $i >= 0; $i--) {
+                        if (preg_match('/^[a-zA-Z\s.]+$/', $lines[$i])) {
+                            $aadhaarName = trim($lines[$i]);
+                            break 2;
+                        }
+                    }
+                }
+            }
+
+            // Fallback regex-based guess
+            if (!$aadhaarName) {
+                preg_match('/[A-Z][a-z]+\s+[A-Z][a-z]+/', $ocrText, $nameMatches);
+                $aadhaarName = $nameMatches[0] ?? null;
+            }
+
+            // ✅ Save into claim if available
+            if ($aadhaarNumber || $aadhaarName) {
+                $claim->aadhaar_number = str_replace(' ', '', $aadhaarNumber);
+                $claim->aadhaar_name = $aadhaarName;
+                $claim->save();
+            }
+
+        } catch (\Exception $e) {
+            Log::error("Aadhaar OCR extraction failed: " . $e->getMessage());
+        }
+    }
+
 
     private function handleVehicleNumber(Request $request)
     {
@@ -1209,8 +1345,8 @@ class ClaimController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'claim_id' => 'required|exists:claims,id',
-            'files' => 'required',
-            'files.*' => 'mimes:jpg,jpeg,png,pdf,mp4,webm|max:10240', // 1MB max file size for FIR
+            // 'files' => 'required',
+            // 'files.*' => 'mimes:jpg,jpeg,png,pdf,mp4,webm|max:10240', // 1MB max file size for FIR
         ]);
 
         if ($validator->fails()) {
@@ -1219,9 +1355,10 @@ class ClaimController extends Controller
 
         $claim = Claim::findOrFail($request->input('claim_id'));
         $firFile = $request->file('files');
-        
+        // dd($firFile);
         // Handle FIR file upload
-        $firFilename = $this->handleSingleFileUpload($firFile, 'fir');
+        // $firFilename = $this->handleSingleFileUpload($firFile, 'fir');
+        $firFilename = $this->handleSingleFileUpload($request->file('files'), 'fir', $claim->id);
         
         // Update the FIR file column in the database
         $claim->fir_file = $firFilename;
@@ -1237,195 +1374,142 @@ class ClaimController extends Controller
     private function handleFileUpload($files, $documentType, $claimId)
     {
         $uploadedFiles = [];
-        // $storagePath = storage_path('upload/document/');
-        //07-feb-2025 add by tanuja
-        $storagePath = storage_path('app/public/upload/document/');
-        foreach ($files as $file) {
-            $filenameWithExt = $file->getClientOriginalName();
-            $filename = pathinfo($filenameWithExt, PATHINFO_FILENAME);
-            $extension = $file->getClientOriginalExtension();
-            $fileNameToStore = $filename . '_' . time() . '.' . $extension;
-            $dir = $storagePath . "/claim-{$claimId}/" . $documentType;
-            
-            if (!file_exists($dir)) {
-                mkdir($dir, 0777, true);
-            }
-            $filePath = $dir . '/' . $fileNameToStore;
-            $file->move($dir, $fileNameToStore);
-            $uploadedFiles[] = $fileNameToStore;
-        }
-        return $uploadedFiles;
-    }
-
-    private function handleSingleFileUpload($files, $documentType)
-    {
-        // $dir = storage_path('upload/document/') . '/' . $documentType;
-        //07-feb-2025 add by tanuja
-        $claimId = $request->input('claim_id');
-        $dir = storage_path('app/public/upload/document/claim-{$claimId}') . '/' . $documentType;
-        foreach ($files as $file) {
-
-        $filenameWithExt = $file->getClientOriginalName();
-        $filename = pathinfo($filenameWithExt, PATHINFO_FILENAME);
-        $extension = $file->getClientOriginalExtension();
-        $fileNameToStore = $filename . '_' . time() . '.' . $extension;
+        $claimHash  = md5($claimId);
+        $folderCode = $this->getFolderCode($documentType);
+        $dir = config('constant.claim_upload_path') . "/$claimHash/{$folderCode}";
 
         if (!file_exists($dir)) {
             mkdir($dir, 0777, true);
         }
 
-        $file->move($dir, $fileNameToStore);
-        }
-        return $fileNameToStore;
-    }
-
-    /*private function handlePhotoUploadWithGeotag($files, $geotags, $captureTimes)
-    {
-        $uploadedFiles = [];
-        // $storagePath = storage_path('upload/document/photos');
-        //07-feb-2025 add by tanuja
-        $storagePath = storage_path('app/public/upload/document/photos');
-        
-        if (!file_exists($storagePath)) {
-            mkdir($storagePath, 0777, true);
-        }
-
-        foreach ($files as $index => $file) {
-            $filenameWithExt = $file->getClientOriginalName();
-            $filename = pathinfo($filenameWithExt, PATHINFO_FILENAME);
+        foreach ($files as $file) {
+            $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
             $extension = $file->getClientOriginalExtension();
-            $fileNameToStore = $filename . '_' . time() . '.' . $extension;
-            
-            $file->move($storagePath, $fileNameToStore);
-            
-            // Validate geotag JSON
-            $geotagJson = $geotags[$index] ?? null;
-            $geotag = null;
-            if (!is_null($geotagJson) && $geotagJson !== "null") {
-                $geotag = json_decode($geotagJson, true);
-                if (json_last_error() !== JSON_ERROR_NONE) {
-                    throw new \Exception("Invalid JSON in geotag at index $index: " . $geotagJson);
-                }
-            }
+            $fileNameToStore = md5($originalName . time() . rand()) . '.' . $extension;
+            $filePath = $dir . '/' . $fileNameToStore;
 
-            $uploadedFiles[] = [
-                'filename' => $fileNameToStore,
-                'geotag' => $geotag,
-                'captureTime' =>  $captureTimes[$index] ?? null
-            ];
+            //Encrypt file contents before storing
+            $encryptedContent = Crypt::encrypt(file_get_contents($file));
+            file_put_contents($filePath, $encryptedContent);
+
+            $uploadedFiles[] = $fileNameToStore;
         }
-        
+
         return $uploadedFiles;
-    }*/
+    }
 
-
-    // private function handlePhotoUploadWithGeotag($files, $geotags, $captureTimes)
-    // {
-    //     $uploadedFiles = [];
-    //     $storagePath  = storage_path('app/public/upload/document/photos');
-    //     $pdfSavePath  = storage_path('app/public/upload/document/photos-pdf');
-
-    //     if (!file_exists($storagePath)) {
-    //         mkdir($storagePath, 0777, true);
-    //     }
-
-    //     if (!file_exists($pdfSavePath)) {
-    //         mkdir($pdfSavePath, 0777, true);
-    //     }
-
-    //     // Upload photos and build data URI
-    //     foreach ($files as $i => $file) {
-    //         $filename = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
-    //         $ext = $file->getClientOriginalExtension();
-    //         $storedFileName = $filename . '_' . time() . '.' . $ext;
-            
-    //         $file->move($storagePath, $storedFileName);
-
-    //         $fullPath = $storagePath . '/' . $storedFileName;
-    //         $mime = mime_content_type($fullPath);
-    //         $base64 = base64_encode(file_get_contents($fullPath));
-    //         $dataUri = "data:$mime;base64,$base64";
-
-    //         $geotagJson = $geotags[$i] ?? null;
-    //         $geotag = null;
-    //         if (!is_null($geotagJson) && $geotagJson !== "null") {
-    //             $geotag = json_decode($geotagJson, true);
-    //             if (json_last_error() !== JSON_ERROR_NONE) {
-    //                 throw new \Exception("Invalid JSON in geotag at index $i");
-    //             }
-    //         }
-
-    //         $uploadedFiles[] = [
-    //             'filename' => $storedFileName,
-    //             'dataUri' => $dataUri,
-    //             'captureTime' => $captureTimes[$i] ?? null,
-    //             'geotag' => $geotag,
-    //         ];
-    //     }
-    //     dd($uploadedFiles);
-
-    //     // Create PDF with 6 photos per page
-    //     // $pdf = Pdf::loadView('pdf.photo_grid', ['photos' => $uploadedFiles]);
-    //     // $pdf->setPaper('a4', 'portrait'); // Optional: set paper size
-
-    //     // $pdfFileName = 'photos_pdf_' . time() . '.pdf';
-    //     // $pdf->save($pdfSavePath . '/' . $pdfFileName);
-
-    //     return $uploadedFiles;
-    // }
-
-    public function showImage($claimHash, $folderHash, $filename)
+    private function handleSingleFileUpload($files, $documentType, $claimId)
     {
-        $photoFolders = [
-            'vehicle_photos',
-            'under_repair_photos',
-            'final_photos',
-        ];
+        $claimHash  = md5($claimId);
+        $folderCode = $this->getFolderCode($documentType);
+        $dir        = config('constant.claim_upload_path') . "/$claimHash/{$folderCode}";
 
-        foreach ($photoFolders as $folder) {
-
-            $path = storage_path("app/public/upload/document/claim-{$claimHash}/photos/{$folder}/{$filename}");
-
-            if (file_exists($path)) {
-                try {
-                    $encryptedContent = file_get_contents($path);
-                    $decryptedContent = Crypt::decrypt($encryptedContent);
-                } catch (\Exception $e) {
-                    abort(403, 'Unable to decrypt image.');
-                }
-
-                $extension = pathinfo($filename, PATHINFO_EXTENSION);
-                $mime = match(strtolower($extension)) {
-                    'jpg', 'jpeg' => 'image/jpeg',
-                    'png'        => 'image/png',
-                    'gif'        => 'image/gif',
-                    default      => 'application/octet-stream',
-                };
-
-                return response($decryptedContent)->header('Content-Type', $mime);
-            }
+        if (!file_exists($dir)) {
+            mkdir($dir, 0777, true);
         }
 
-        abort(404); // Not found in any folder
+        $uploadedFiles = [];
+
+        // If it's a single file (not an array), wrap it
+        if (!is_array($files)) {
+            $files = [$files];
+        }
+
+        foreach ($files as $file) {
+            $filenameWithExt = $file->getClientOriginalName();
+            $filename        = pathinfo($filenameWithExt, PATHINFO_FILENAME);
+            $extension       = $file->getClientOriginalExtension();
+            $fileNameToStore = md5($filename . time() . rand()) . '.' . $extension;
+
+            // 🔐 Encrypt the file before saving
+            $encryptedContent = Crypt::encrypt(file_get_contents($file));
+            file_put_contents($dir . '/' . $fileNameToStore, $encryptedContent);
+
+            $uploadedFiles[] = $fileNameToStore;
+        }
+
+        return count($uploadedFiles) === 1 ? $uploadedFiles[0] : $uploadedFiles;
     }
+
+    function getFolderCode($documentType)
+    {
+        $codeMap = [
+            'number_plate'        => 'NPX',
+            'aadhaar'             => 'AAX',
+            'pan_card'            => 'PNX',
+            'tax_receipt'         => 'TXP',
+            'sales_invoice'       => 'SIV',
+            'dl'                  => 'DLX',
+            'other_dl'            => 'DLX',
+            'rcbook'              => 'RCB',
+            'insurance'           => 'INC',
+            'claimform'           => 'CMF',
+            'claimintimation'     => 'CMI',
+            'satisfactionvoucher' => 'SFV',
+            'fir'                 => 'FRC',
+            'paymentreceipt'      => 'PYR',
+            'finalbill'           => 'FBL',
+            'video'               => 'VDX',
+        ];
+        return $codeMap[$documentType] ?? strtoupper(substr($documentType, 0, 3));
+    }
+
+    public function showImage($claimHash, $folder1, $folder2, $filename)
+    {
+        $basePath = config('constant.claim_upload_path');
+        
+        // Aadhaar format (no subfolder): {claimHash}/{folder1}/{filename}
+        if ($folder2 === 'null') {
+            $path = "{$basePath}/{$claimHash}/{$folder1}/{$filename}";
+        } else {
+            // Photo format: {claimHash}/{folder1}/{folder2}/{filename}
+            $path = "{$basePath}/{$claimHash}/{$folder1}/{$folder2}/{$filename}";
+        }
+
+        if (file_exists($path)) {
+            return $this->decryptAndReturnImage($path);
+        }
+
+        abort(404, 'Image not found');
+    }
+
+    // Helper function
+    private function decryptAndReturnImage($path)
+    {
+        try {
+            $decryptedContent = Crypt::decrypt(file_get_contents($path));
+            $finfo = finfo_open();
+            $mimeType = finfo_buffer($finfo, $decryptedContent, FILEINFO_MIME_TYPE);
+            finfo_close($finfo);
+
+            return response($decryptedContent)->header('Content-Type', $mimeType);
+        } catch (\Exception $e) {
+            abort(404, 'Invalid image');
+        }
+    }
+
+    
 
     private function handlePhotoUploadWithGeotag($files, $geotags, $captureTimes, $claimId, $photoType = 'vehicle')
     {
         $uploadedFiles = [];
 
-        // Map folder names
+        // Step 1: Folder code mapping
         $photoTypeMap = [
-            'vehicle'       => 'vehicle_photos',
-            'under_repair'  => 'under_repair_photos',
-            'final'         => 'final_photos',
+            'vehicle'       => 'VPH', // or VPH (Vehicle Photo)
+            'under_repair'  => 'URP',
+            'final'         => 'FIP',
         ];
 
-        $claimHash    = md5($claimId);
+        $folderCode = $photoTypeMap[$photoType] ?? 'VPH';
 
-        $photoFolder = $photoTypeMap[$photoType] ?? 'vehicle_photos'; // default fallback
-        $storagePath = storage_path("app/public/upload/document/claim-{$claimHash}/photos/{$photoFolder}");
-        $pdfPath     = storage_path('app/photos/pdf'); // Store all PDFs in photos/pdf
+        // Optional: claim hash to obscure claim ID
+        $claimHash  = md5($claimId);
 
+        // Final secure storage path
+        $folderName   = "{$folderCode}";
+        $storagePath  = config('constant.claim_upload_path') ."/{$claimHash}/PHX/{$folderName}";
+        $pdfPath      = storage_path('app/photos/pdf');
 
         // Ensure directories exist
         if (!file_exists($storagePath)) {
@@ -1435,13 +1519,13 @@ class ClaimController extends Controller
             mkdir($pdfPath, 0777, true);
         }
 
-        // Encrypt and store each image file
+        // Step 2: Process each photo
         foreach ($files as $i => $file) {
             $origName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
             $ext      = $file->getClientOriginalExtension();
             $stored   = md5($origName . time() . rand()) . '.' . $ext;
 
-            // Encrypt file content
+            // Encrypt content and save
             $encryptedContents = Crypt::encrypt(file_get_contents($file));
             file_put_contents($storagePath . '/' . $stored, $encryptedContents);
 
@@ -1463,7 +1547,7 @@ class ClaimController extends Controller
             ];
         }
 
-        // Create PDF from decrypted content
+        // Step 3: Generate PDF preview
         $pdf = new \FPDF('P', 'mm', 'A4');
         $pdf->SetAutoPageBreak(true, 10);
         $pdf->SetMargins(10, 10, 10);
@@ -1496,12 +1580,12 @@ class ClaimController extends Controller
 
                     $pdf->Image($decryptedTempPath, $offsetX, $offsetY, $drawW, $drawH);
 
-                    unlink($decryptedTempPath); // cleanup
+                    unlink($decryptedTempPath);
                 } catch (\Exception $e) {
-                    continue; // skip invalid or unreadable images
+                    continue;
                 }
 
-                // Move to next row/column
+                // Layout: 2 per row
                 if ((($idx + 1) % 2) === 0) {
                     $x = 10;
                     $y += $cellH + 10;
@@ -1511,247 +1595,47 @@ class ClaimController extends Controller
             }
         }
 
-        // Save the encrypted photo PDF
+        // Save encrypted PDF
         $pdfFileName = $photoType . '_photos_pdf_' . time() . '.pdf';
         $pdf->Output('F', $pdfPath . '/' . $pdfFileName);
 
         return $uploadedFiles;
     }
 
-    // private function handlePhotoUploadWithGeotag($files, $geotags, $captureTimes)
-    // {
-    //     $uploadedFiles = [];
-    //     $storagePath = storage_path('app/public/upload/document/photos');
-
-    //     if (!file_exists($storagePath)) {
-    //         mkdir($storagePath, 0777, true);
-    //     }
-
-    //     foreach ($files as $index => $file) {
-    //         $filenameWithExt = $file->getClientOriginalName();
-    //         $filename = pathinfo($filenameWithExt, PATHINFO_FILENAME);
-    //         $extension = $file->getClientOriginalExtension();
-    //         $fileNameToStore = $filename . '_' . time() . '.' . $extension;
-
-    //         $file->move($storagePath, $fileNameToStore);
-
-    //         $geotagJson = $geotags[$index] ?? null;
-    //         $geotag = null;
-    //         if (!is_null($geotagJson) && $geotagJson !== "null") {
-    //             $geotag = json_decode($geotagJson, true);
-    //             if (json_last_error() !== JSON_ERROR_NONE) {
-    //                 throw new \Exception("Invalid JSON in geotag at index $index: " . $geotagJson);
-    //             }
-    //         }
-
-    //         $uploadedFiles[] = [
-    //             'filename' => $fileNameToStore,
-    //             'geotag' => $geotag,
-    //             'captureTime' =>  $captureTimes[$index] ?? null
-    //         ];
-    //     }
-
-    //     // PDF generation
-    //     $pdfPath = storage_path('app/public/upload/document/photos-pdf');
-    //     if (!file_exists($pdfPath)) {
-    //         mkdir($pdfPath, 0777, true);
-    //     }
-
-    //     $pdf = new \FPDF();
-    //     $pdf->SetAutoPageBreak(true, 10);
-    //     $pdf->SetMargins(10, 10, 10);
-
-    //     $imagesPerPage = 6;
-    //     $imgWidth = 60;
-    //     $imgHeight = 60;
-
-    //     foreach (array_chunk($uploadedFiles, $imagesPerPage) as $chunk) {
-    //         $pdf->AddPage();
-    //         $x = 10;
-    //         $y = 10;
-
-    //         foreach ($chunk as $i => $photo) {
-    //             $imagePath = $storagePath . '/' . $photo['filename'];
-    //             $pdf->Image($imagePath, $x, $y, $imgWidth, $imgHeight);
-
-    //             $x += $imgWidth + 10;
-    //             if (($i + 1) % 2 === 0) {
-    //                 $x = 10;
-    //                 $y += $imgHeight + 10;
-    //             }
-    //         }
-    //     }
-
-    //     $pdfFilename = 'photos_pdf_' . time() . '.pdf';
-    //     $pdf->Output('F', $pdfPath . '/' . $pdfFilename);
-
-    //     return $uploadedFiles;
-    // }
-
-
-    // its working
-        /*private function handlePhotoUploadWithGeotag($files, $geotags, $captureTimes)
-        {
-            $uploadedFiles = [];
-            $storagePath = storage_path('app/public/upload/document/photos');
-
-            if (!file_exists($storagePath)) {
-                mkdir($storagePath, 0777, true);
-            }
-
-            foreach ($files as $index => $file) {
-                $filenameWithExt = $file->getClientOriginalName();
-                $filename = pathinfo($filenameWithExt, PATHINFO_FILENAME);
-                $extension = $file->getClientOriginalExtension();
-                $fileNameToStore = $filename . '_' . time() . '.' . $extension;
-
-                $file->move($storagePath, $fileNameToStore);
-
-                // Validate geotag JSON
-                $geotagJson = $geotags[$index] ?? null;
-                $geotag = null;
-                if (!is_null($geotagJson) && $geotagJson !== "null") {
-                    $geotag = json_decode($geotagJson, true);
-                    if (json_last_error() !== JSON_ERROR_NONE) {
-                        throw new \Exception("Invalid JSON in geotag at index $index: " . $geotagJson);
-                    }
-                }
-
-                $uploadedFiles[] = [
-                    'filename' => $fileNameToStore,
-                    'geotag' => $geotag,
-                    'captureTime' =>  $captureTimes[$index] ?? null
-                ];
-            }
-
-            // === Generate PDF after upload ===
-            $pdfSavePath = storage_path('app/public/upload/document/photos-pdf');
-            if (!file_exists($pdfSavePath)) {
-                mkdir($pdfSavePath, 0777, true);
-            }
-
-            $pdf = Pdf::loadView('pdf.photo_gallery', ['photos' => $uploadedFiles]);
-
-            $pdfFileName = 'photos_pdf_' . time() . '.pdf';
-            $pdf->save($pdfSavePath . '/' . $pdfFileName);
-
-            // Optionally add the pdf path to returned array
-            // return [
-            //     'uploaded_photos' => $uploadedFiles,
-            //     'pdf_file' => 'upload/document/' . $pdfFileName
-            // ];
-             return $uploadedFiles;
-
-        }*/
-
-
-    /*private function handlePhotoUploadWithGeotag($files, $geotags, $captureTimes)
-    {
-        // dd("hhhh");
-        $uploadedFiles = [];
-        $imagePathsForPdf = [];
-
-        $storagePath = storage_path('app/public/upload/document/photos');
-
-        if (!file_exists($storagePath)) {
-            mkdir($storagePath, 0777, true);
-        }
-
-        foreach ($files as $index => $file) {
-            $filenameWithExt = $file->getClientOriginalName();
-            $filename = pathinfo($filenameWithExt, PATHINFO_FILENAME);
-            $extension = $file->getClientOriginalExtension();
-            $fileNameToStore = $filename . '_' . time() . '.' . $extension;
-
-            // ✅ Resize & compress image using Intervention
-            $image = Image::make($file)
-                ->resize(1024, null, function ($constraint) {
-                    $constraint->aspectRatio();
-                    $constraint->upsize();
-                })
-                ->encode($extension, 75);
-
-            $image->save($storagePath . '/' . $fileNameToStore);
-
-            // ✅ Add path for PDF generation
-           $imagePathsForPdf[] = public_path('storage/upload/document/photos/' . $fileNameToStore);
-
-            // dd($imagePathsForPdf[]);
-            // ✅ Handle geotag
-            $geotagJson = $geotags[$index] ?? null;
-            $geotag = null;
-            if (!is_null($geotagJson) && $geotagJson !== "null") {
-                $geotag = json_decode($geotagJson, true);
-                if (json_last_error() !== JSON_ERROR_NONE) {
-                    throw new \Exception("Invalid JSON in geotag at index $index: " . $geotagJson);
-                }
-            }
-
-            $uploadedFiles[] = [
-                'filename' => $fileNameToStore,
-                'geotag' => $geotag,
-                'captureTime' => $captureTimes[$index] ?? null
-            ];
-        }
-
-        // ✅ Generate PDF from all uploaded images
-        $pdf = PDF::loadView('pdf.photo_summary', ['images' => $imagePathsForPdf]);
-        $pdfPath = storage_path('app/public/upload/document/photo_summary.pdf');
-        $pdf->save($pdfPath);
-
-        return [
-            'uploadedFiles' => $uploadedFiles,
-            'pdf_path' => 'storage/upload/document/photo_summary.pdf'
-        ];
-    }*/
-
-
-
-
-
-
     private function handleNumberPlateUploadWithGeotag($files, $geotags, $captureTimes, $claimId)
     {
         $uploadedFiles = [];
-        // $storagePath = storage_path('upload/document/number_plate');
-        //07-feb-2025 add by tanuja
-        $storagePath = storage_path("app/public/upload/document/claim-{$claimId}/number_plate");
-        
-        // Create the storage path if it doesn't exist
+        $folderCode = $this->getFolderCode('number_plate');
+        $claimHash  = md5($claimId);
+        $storagePath = config('constant.claim_upload_path') . "/$claimHash/{$folderCode}";
+
         if (!file_exists($storagePath)) {
             mkdir($storagePath, 0777, true);
         }
-
-        // Get the original filename and extension
+        // dd($files);
         $filenameWithExt = $files->getClientOriginalName();
         $filename = pathinfo($filenameWithExt, PATHINFO_FILENAME);
         $extension = $files->getClientOriginalExtension();
-        
-        // Create a unique filename using current time
-        $fileNameToStore = $filename . '_' . time() . '.' . $extension;
-        
-        // dd($$fileNameToStore);
-        // Move the uploaded file to the designated storage path
-        $files->move($storagePath, $fileNameToStore);
+        $fileNameToStore = md5($filename . time() . rand()) . '.' . $extension;
+        $filePath = $storagePath . '/' . $fileNameToStore;
+
+        //Encrypt the file contents
+        $encryptedContent = Crypt::encrypt(file_get_contents($files));
+        file_put_contents($filePath, $encryptedContent);
+
         $geotag = json_decode($geotags, true);
 
-        // Prepare the uploaded file data including the filename, geotag, and capture time
         $uploadedFiles[] = [
-            'filename' => $fileNameToStore,
-            'geotag' => $geotag,
-            'captureTime' => $captureTimes
+            'filename'     => $fileNameToStore,
+            'geotag'       => $geotag,
+            'captureTime'  => $captureTimes
         ];
-        // Call the OCR API to extract text from the image
-        $ocrText = $this->extractTextFromImage($storagePath . '/' . $fileNameToStore);
-        
-        // Extract the vehicle number plate
-        $vehicleNumber = $this->extractVehicleNumber($ocrText);
-    
-        // Optionally, add the extracted vehicle number to the uploaded file data
-        $uploadedFiles[0]['vehicleNumber'] = $vehicleNumber;
-    
-        // Return the array of uploaded files with metadata
-        // dd($uploadedFiles);
+
+        // Extract vehicle number
+        // $ocrText = $this->extractTextFromImage($filePath); // This should already decrypt inside the function
+        // $vehicleNumber = $this->extractVehicleNumber($ocrText);
+        // $uploadedFiles[0]['vehicleNumber'] = $vehicleNumber;
+
         return $uploadedFiles;
     }
     private function extractTextFromImage($imagePath)
@@ -2075,24 +1959,20 @@ class ClaimController extends Controller
         // $this->mergeImagesIntoPDF($mpdf, json_decode($claim->processed_image_files), 'processed_image', 'Processed Images', 20);
         
         // Merge image files into the mPDF document
-        if (!empty($claim->aadhaar_files)) {
-            $this->mergeImagesIntoPDF($mpdf, json_decode($claim->aadhaar_files), 'aadhaar', 'Aadhaar');
-        }
-        if (!empty($claim->rcbook_files)) {
-            $this->mergeImagesIntoPDF($mpdf, json_decode($claim->rcbook_files), 'rcbook', 'RC-Book');
-        }
-        if (!empty($claim->dl_files)) {
-            $this->mergeImagesIntoPDF($mpdf, json_decode($claim->dl_files), 'dl', 'Driving License');
-        }
-    if (!empty($claim->photo_files)) {
-            $photoFiles = array_map(fn($file) => $file['filename'], json_decode($claim->photo_files, true) ?: []);
-            // dd($photoFiles);
-            $this->mergeImagesIntoPDF($mpdf, $photoFiles, 'photos', 'Photos');
-        }
+        $this->mergeImagesIntoPDF($mpdf, json_decode($claim->aadhaar_files), 'aadhaar', 'Aadhaar', 6, false, $id);
+        $this->mergeImagesIntoPDF($mpdf, json_decode($claim->pancard_file), 'pan_card', 'Pan Card', 6, false, $id);
+        $this->mergeImagesIntoPDF($mpdf, json_decode($claim->rcbook_files), 'rcbook', 'RC-Book', 6, false, $id);
+        $this->mergeImagesIntoPDF($mpdf, json_decode($claim->dl_files), 'dl', 'Driving License', 6, false, $id);
+        $this->mergeImagesIntoPDF($mpdf, json_decode($claim->other_dl_files), 'other_dl', 'Other Driving License', 6, false, $id);
+        $this->mergeImagesIntoPDF($mpdf, json_decode($claim->tax_receipt_file), 'tax_receipt', 'Tax Receipt', 6, false, $id);
+        $this->mergeImagesIntoPDF($mpdf, json_decode($claim->sales_invoice_file), 'sales_invoice', 'Sales Invoice', 6, false, $id);
+        $this->mergeImagesIntoPDF($mpdf, json_decode($claim->fir_file), 'fir', 'FIR Copy', 6, false, $id);
 
-        if (!empty($claim->processed_image_files)) {
-            $this->mergeImagesIntoPDF($mpdf, json_decode($claim->processed_image_files), 'processed_image', 'Processed Images', 20);
-        }
+        $this->mergeImagesIntoPDF($mpdf, json_decode($claim->photo_files, true), 'vehicle', 'Vehicle Photos', 6, true, $id);
+        $this->mergeImagesIntoPDF($mpdf, json_decode($claim->under_repair_photo_files, true), 'under_repair', 'Under Repair Photos', 6, true, $id);
+        $this->mergeImagesIntoPDF($mpdf, json_decode($claim->final_photo_files, true), 'final', 'Final Photos', 6, true, $id);
+        $this->mergeImagesIntoPDF($mpdf, json_decode($claim->processed_image_files), 'processed_image', 'Processed Images', 6,$id);
+
 
         // Generate a unique temporary file name
         $uniqueId = uniqid();
@@ -2107,21 +1987,13 @@ class ClaimController extends Controller
         // $this->addPdfFileToList($pdfFiles, $claim->consent_form_file, 'consentform');
         // $this->addPdfFileToList($pdfFiles, $claim->insurance_file, 'insurance');
         
-        if (!empty($claim->claim_form_file)) {
-            $this->addPdfFileToList($pdfFiles, $claim->claim_form_file, 'claimform');
-        }
-        if (!empty($claim->claim_intimation_file)) {
-            $this->addPdfFileToList($pdfFiles, $claim->claim_intimation_file, 'claimintimation');
-        }
-        if (!empty($claim->satisfaction_voucher_file)) {
-            $this->addPdfFileToList($pdfFiles, $claim->satisfaction_voucher_file, 'satisfactionvoucher');
-        }
-        if (!empty($claim->consent_form_file)) {
-            $this->addPdfFileToList($pdfFiles, $claim->consent_form_file, 'consentform');
-        }
-        if (!empty($claim->insurance_file)) {
-            $this->addPdfFileToList($pdfFiles, $claim->insurance_file, 'insurance');
-        }
+        $this->addPdfFileToList($pdfFiles, $claim->claim_form_file, 'claimform', $id);
+        $this->addPdfFileToList($pdfFiles, $claim->claim_intimation_file, 'claimintimation', $id);
+        $this->addPdfFileToList($pdfFiles, $claim->satisfaction_voucher_file, 'satisfactionvoucher', $id);
+        $this->addPdfFileToList($pdfFiles, $claim->consent_form_file, 'consentform', $id);
+        $this->addPdfFileToList($pdfFiles, $claim->insurance_file, 'insurance', $id);
+        $this->addPdfFileToList($pdfFiles, $claim->insurance_file, 'paymentreceipt', $id);
+        $this->addPdfFileToList($pdfFiles, $claim->insurance_file, 'finalbill', $id);
 
         // Generate a unique output file name
         $mergedPdfPath = storage_path("temp/claim_report_{$claimId}_{$uniqueId}.pdf");
@@ -2132,11 +2004,15 @@ class ClaimController extends Controller
         return response()->download($mergedPdfPath);
     }
 
-    private function addPdfFileToList(&$pdfFiles, $fileName, $folder)
+    private function addPdfFileToList(&$pdfFiles, $fileName, $folder, $claimId)
     {
         if ($fileName) {
-            $filePath = storage_path("app/public/upload/document/claim-749/{$folder}/{$fileName}");
-            // dd($filePath);
+            $claimHash = md5($claimId);
+            $folderCode = getFolderCode($folder);
+
+            // Construct full path
+            $filePath = config('constant.claim_upload_path') . "/{$claimHash}/{$folderCode}/{$fileName}";
+
             if (file_exists($filePath)) {
                 $pdfFiles[] = $filePath;
             }
@@ -2174,62 +2050,94 @@ class ClaimController extends Controller
     }
     
 
-     public function downloadPhotosPdf(Claim $claim)
+    public function downloadPhotosPdf(Claim $claim)
     {
-        // Decode the stored JSON
-        $photos = json_decode($claim->photo_files, true);
+        $photoSections = [
+            'Vehicle Damage Photos' => ['key' => 'photo_files', 'folder' => 'VPH'],
+            'Under Repair Photos'   => ['key' => 'under_repair_photo_files', 'folder' => 'URP'],
+            'Final Photos'          => ['key' => 'final_photo_files', 'folder' => 'FIP'],
+        ];
 
-        // where the files live on disk:
-        $storagePath = storage_path('app/public/upload/document/photos');
+        $claimHash = md5($claim->id);
+        // $yearMonth = now()->format('Ym');
+        $basePath = config('constant.claim_upload_path');
 
-        // build the PDF
         $pdf = new \FPDF('P', 'mm', 'A4');
         $pdf->SetAutoPageBreak(true, 10);
         $pdf->SetMargins(10, 10, 10);
+        $pdf->SetFont('Arial', '', 12);
 
         $imagesPerPage = 6;
-        $cellW = 90;   // two across fits into 210mm minus margins
-        $cellH = 60;   // three rows fits into 297mm minus margins
+        $cellW = 90;
+        $cellH = 60;
 
-        foreach (array_chunk($photos, $imagesPerPage) as $chunk) {
+        foreach ($photoSections as $sectionTitle => $info) {
+            $photoJson = $claim->{$info['key']};
+            if (empty($photoJson)) continue;
+
+            $photos = json_decode($photoJson, true);
+            if (!is_array($photos)) continue;
+
+            // Start new page for each section
             $pdf->AddPage();
-            $x = 10;
-            $y = 10;
+            $pdf->SetFont('Arial', 'B', 14); // Bold, larger font for heading
+            $pdf->Cell(0, 10, $sectionTitle, 0, 1, 'C');
+            $pdf->Ln(5); // space after heading
 
-            foreach ($chunk as $idx => $photo) {
-                $fullPath = $storagePath . '/' . $photo['filename'];
-                if (!file_exists($fullPath)) {
+            $folderPath = "$basePath/$claimHash/PHX/{$info['folder']}";
+
+            $x = 10;
+            $y = 25;
+            $count = 0;
+
+            foreach ($photos as $idx => $photo) {
+                if (!isset($photo['filename'])) continue;
+
+                $photoPath = $folderPath . '/' . $photo['filename'];
+                if (!file_exists($photoPath)) continue;
+
+                $decryptedTempPath = sys_get_temp_dir() . '/' . uniqid('photo_') . '.jpg';
+
+                try {
+                    $decryptedContent = Crypt::decrypt(file_get_contents($photoPath));
+                    file_put_contents($decryptedTempPath, $decryptedContent);
+
+                    list($pxW, $pxH) = getimagesize($decryptedTempPath);
+                    $origW = $pxW * 25.4 / 96;
+                    $origH = $pxH * 25.4 / 96;
+                    $scale = min($cellW / $origW, $cellH / $origH);
+                    $drawW = $origW * $scale;
+                    $drawH = $origH * $scale;
+                    $offsetX = $x + ($cellW - $drawW) / 2;
+                    $offsetY = $y + ($cellH - $drawH) / 2;
+
+                    $pdf->Image($decryptedTempPath, $offsetX, $offsetY, $drawW, $drawH);
+                    unlink($decryptedTempPath);
+                } catch (\Exception $e) {
                     continue;
                 }
 
-                // get original px dimensions
-                list($pxW, $pxH) = getimagesize($fullPath);
-                // convert to mm (assuming 96dpi)
-                $origW = $pxW * 25.4 / 96;
-                $origH = $pxH * 25.4 / 96;
-                // scale to fit cell
-                $scale = min($cellW / $origW, $cellH / $origH);
-                $drawW = $origW * $scale;
-                $drawH = $origH * $scale;
-                // center in cell
-                $offX = $x + ($cellW - $drawW) / 2;
-                $offY = $y + ($cellH - $drawH) / 2;
-                // draw
-                $pdf->Image($fullPath, $offX, $offY, $drawW, $drawH);
-
-                // advance
-                if ((($idx + 1) % 2) === 0) {
+                // Move to next cell
+                if ((($count + 1) % 2) === 0) {
                     $x = 10;
                     $y += $cellH + 10;
                 } else {
                     $x += $cellW + 10;
+                }
+
+                $count++;
+
+                // If 6 images placed, start a new page (with no heading)
+                if ($count % $imagesPerPage === 0 && $idx + 1 < count($photos)) {
+                    $pdf->AddPage();
+                    $x = 10;
+                    $y = 10;
                 }
             }
         }
 
         $filename = "claim_{$claim->id}_photos_" . now()->format('Ymd_His') . ".pdf";
 
-        // send it as a download
         return response(
             $pdf->Output('S', $filename),
             200,
@@ -2240,266 +2148,119 @@ class ClaimController extends Controller
         );
     }
 
-// private function mergeImagesIntoPDF($mpdf, $files, $folder, $label, $maxImages = 2, $includeMetadata = false)
-// {
-//     if (!empty($files)) {
-//         $imageCounter = 0;
-//         foreach ($files as $file) {
-//             if ($imageCounter % 2 == 0) {
-//                 // Add a new page every two images
-//                 $mpdf->AddPage();
-//             }
-
-//             // Set the path for the current image file
-//             $imagePath = ($folder == 'processed_image') 
-//                 ? storage_path("upload/{$folder}/{$file}")
-//                 : storage_path("upload/document/{$folder}/" . ($includeMetadata ? $file['filename'] : $file));
-                
-//             // dd($imagePath);
-                
-//             if (file_exists($imagePath)) {
-//                 // Get the image's original size
-//                 list($width, $height) = getimagesize($imagePath);
-
-//                 // A4 page size in mm
-//                 $pageWidth = 210;  // A4 width
-//                 $pageHeight = 297; // A4 height
-
-//                 // For a single image, auto-fit to the page while maintaining aspect ratio
-//                 if (count($files) == 1) {
-//                     // Calculate the scale ratio based on the page size and image dimensions
-//                     $widthRatio = $pageWidth / $width;
-//                     $heightRatio = $pageHeight / $height;
-
-//                     // The scale ratio to fit the image completely within the page dimensions
-//                     $scaleRatio = min($widthRatio, $heightRatio);
-
-//                     // Calculate the new width and height
-//                     $newWidth = $width * $scaleRatio;
-//                     $newHeight = $height * $scaleRatio;
-
-//                     // Center the image on the page
-//                     $x = ($pageWidth - $newWidth) / 2; // Center horizontally
-//                     $y = ($pageHeight - $newHeight) / 2; // Center vertically
-
-//                     // Add the image to the PDF
-//                     $mpdf->Image($imagePath, $x, $y, $newWidth, $newHeight, 'jpg', '', true, false);
-//                 } else {
-//                     // For multiple images, fit within the defined dimensions (90mm as before)
-//                     $maxWidth = 90;
-//                     $maxHeight = 90;
-
-//                     // Calculate the scale ratio for the multiple image case
-//                     $widthRatio = $maxWidth / $width;
-//                     $heightRatio = $maxHeight / $height;
-//                     $scaleRatio = min($widthRatio, $heightRatio);
-
-//                     $newWidth = $width * $scaleRatio;
-//                     $newHeight = $height * $scaleRatio;
-
-//                     // Calculate position (left/right) for each image
-//                     $x = ($imageCounter % 2 == 0) ? 10 : 110;
-//                     $y = 50;
-
-//                     // Add the image to the PDF
-//                     $mpdf->Image($imagePath, $x, $y, $newWidth, $newHeight, 'jpg', '', true, false);
-//                 }
-
-//                 // Add metadata if available
-//                 if ($includeMetadata && isset($file['captureTime']) && isset($file['geotag'])) {
-//                     $mpdf->SetFont('', '', 8);
-//                     $mpdf->SetXY($x, $y + $newHeight); // Adjust y-position based on new image height
-//                     $captureTime = \Carbon\Carbon::parse($file['captureTime'])->format('Y-m-d H:i:s');
-//                     $latitude = $file['geotag']['latitude'] ?? 'N/A';
-//                     $longitude = $file['geotag']['longitude'] ?? 'N/A';
-//                     $mpdf->WriteCell($newWidth, 5, "Capture Time: {$captureTime}", 0, 1, 'L');
-//                     $mpdf->SetXY($x, $y + $newHeight + 5);
-//                     $mpdf->WriteCell($newWidth, 5, "Lat: {$latitude}, Long: {$longitude}", 0, 1, 'L');
-//                 }
-//             }
-
-//             $imageCounter++;
-
-//             // Limit the number of images to the specified maximum
-//             if ($imageCounter >= $maxImages) {
-//                 break;
-//             }
-//         }
-//     }
-// }
-
-    // private function mergeImagesIntoPDF($mpdf, $files, $folder, $label, $maxImages= 6, $includeMetadata = false)
-    // {
-    //     if (empty($files)) {
-    //         return "No files provided.";
-    //     }
-
-    //     $imagesAdded = 0;
-    //     $imagesPerPage = $maxImages;
-
-    //     // Handle photos folder with 3x2 layout
-    //     if ($folder === 'photos') {
-    //         $cols = 3;
-    //         $rows = 2;
-    //         $cellW = 60;    // mm
-    //         $cellH = 90;    // mm
-    //         $paddingX = 10; // horizontal spacing
-    //         $paddingY = 20; // vertical spacing
-
-    //         // Process 6 images per page
-    //         foreach (array_chunk($files, $imagesPerPage) as $pageImages) {
-    //             $mpdf->AddPage();
-    //             $mpdf->WriteHTML("<h3 style='text-align:center;'>{$label}</h3>");
-
-    //             $row = 0;
-    //             $col = 0;
-
-    //             foreach ($pageImages as $file) {
-    //                 $imagePath = ($folder == 'processed_image')
-    //                     ? public_path("storage/upload/{$folder}/{$file}")
-    //                     : public_path("storage/upload/document/{$folder}/" . ($includeMetadata ? $file['filename'] : $file));
-
-    //                 if (file_exists($imagePath)) {
-    //                     list($originalWidth, $originalHeight) = getimagesize($imagePath);
-
-    //                     // Calculate scale ratio
-    //                     $scaleRatio = min($cellW / $originalWidth, $cellH / $originalHeight);
-
-    //                     $newWidth = $originalWidth * $scaleRatio;
-    //                     $newHeight = $originalHeight * $scaleRatio;
-
-    //                     // Calculate position
-    //                     $x = $paddingX + $col * ($cellW + $paddingX);
-    //                     $y = $paddingY + $row * ($cellH + $paddingY);
-
-    //                     $mpdf->Image($imagePath, $x, $y, $newWidth, $newHeight, 'jpg', '', true, false);
-
-    //                     $imagesAdded++;
-
-    //                     $col++;
-    //                     if ($col >= $cols) {
-    //                         $col = 0;
-    //                         $row++;
-    //                     }
-    //                 }
-    //             }
-    //         }
-
-    //     } else {
-    //         // Other documents: Full-page images
-    //         foreach ($files as $file) {
-    //             $filename = $includeMetadata ? $file['filename'] : $file;
-
-    //             $imagePath = ($folder === 'processed_image')
-    //                 ? public_path("storage/upload/{$folder}/{$filename}")
-    //                 : public_path("storage/upload/document/{$folder}/{$filename}");
-
-    //             if (!file_exists($imagePath)) {
-    //                 continue;
-    //             }
-
-    //             $mpdf->AddPage();
-    //             $mpdf->WriteHTML("<h3 style='text-align:center;'>$label</h3>");
-
-    //             list($w, $h) = getimagesize($imagePath);
-    //             $pageW = 190; // 210 - 20mm margin
-    //             $pageH = 277; // 297 - 20mm margin
-
-    //             $scale = min($pageW / $w, $pageH / $h);
-    //             $newW = $w * $scale;
-    //             $newH = $h * $scale;
-
-    //             $x = (210 - $newW) / 2;
-    //             $y = (297 - $newH) / 2;
-
-    //             $mpdf->Image($imagePath, $x, $y, $newW, $newH, '', '', true, false);
-    //             $imagesAdded++;
-    //         }
-    //     }
-
-    //     return $imagesAdded > 0 ? "Images added successfully: $imagesAdded" : "No valid images found.";
-    // }
-
-
-    private function mergeImagesIntoPDF($mpdf, $files, $folder, $label, $maxImages = 6, $includeMetadata = false)
+    /**
+     * Merges encrypted image files into a PDF using mPDF.
+     *
+     * @param \Mpdf\Mpdf $mpdf               mPDF instance to write images into
+     * @param array      $files              List of image files (array of filenames or array of ['filename' => string])
+     * @param string     $folder             Logical folder type (e.g., 'aadhaar', 'vehicle', 'under_repair')
+     * @param string     $label              Label to be used as a heading on each page (e.g., 'Aadhaar', 'Vehicle Photos')
+     * @param int        $maxImages          Max images per page (default: 6, for grid layout)
+     * @param bool       $includeMetadata    If true, assumes each $files[] is an array with 'filename'
+     * @param int|null   $claimId            ID of the claim (used to generate folder hash)
+     *
+     * @return string Success or failure message
+    */
+    private function mergeImagesIntoPDF($mpdf, $files, $folder, $label, $maxImages = 6, $includeMetadata = false, $claimId = null)
     {
         if (empty($files)) {
             return "No files provided.";
         }
 
+        $claimHash = md5($claimId);
         $imagesAdded = 0;
 
-        // For 'photos' folder: 6 images per page, 2 per row
-        if ($folder === 'photos') {
-            $cols    = 2;    // 2 images per row
-            $rows    = 3;    // 3 rows per page
-            $cellW   = 90;   // Image width
-            $cellH   = 65;   // Image height
-            $gapX    = 10;   // Horizontal gap
-            $gapY    = 10;   // Vertical gap
-            $startX  = 15;   // Left margin
-            $startY  = 25;   // Top margin
+        $isGridLayout = in_array($folder, ['vehicle', 'under_repair', 'final']);
+
+        // For grid layout (vehicle/under_repair/final)
+        if ($isGridLayout) {
+            $cols    = 2;
+            $rows    = 3;
+            $cellW   = 90;
+            $cellH   = 65;
+            $gapX    = 10;
+            $gapY    = 10;
+            $startX  = 15;
+            $startY  = 25;
 
             foreach (array_chunk($files, $maxImages) as $pageImages) {
                 $mpdf->AddPage();
-                $mpdf->WriteHTML("<h3 style='text-align:center; margin-bottom:5mm;'>{$label}</h3>");
+                $mpdf->WriteHTML("<h4 style='text-align:center; margin-bottom:5mm;'>{$label}</h4>");
 
                 $row = 0;
                 $col = 0;
 
                 foreach ($pageImages as $file) {
                     $filename = $includeMetadata ? $file['filename'] : $file;
-                    $imagePath = public_path("storage/upload/document/{$folder}/" . $filename);
+                    $folderCode = getFolderCode($folder);
 
-                    if (!file_exists($imagePath)) {
+                    $encryptedPath = config('constant.claim_upload_path') . "/{$claimHash}/PHX/{$folderCode}/{$filename}";
+                    if (!file_exists($encryptedPath)) continue;
+
+                    try {
+                        $tempPath = sys_get_temp_dir() . '/' . uniqid('pdfimg_') . '.jpg';
+                        $decryptedContent = Crypt::decrypt(file_get_contents($encryptedPath));
+                        file_put_contents($tempPath, $decryptedContent);
+
+                        $x = $startX + $col * ($cellW + $gapX);
+                        $y = $startY + $row * ($cellH + $gapY);
+
+                        $mpdf->Image($tempPath, $x, $y, $cellW, $cellH, '', '', true, false);
+                        unlink($tempPath);
+                        $imagesAdded++;
+
+                        $col++;
+                        if ($col === $cols) {
+                            $col = 0;
+                            $row++;
+                        }
+                    } catch (\Exception $e) {
                         continue;
-                    }
-
-                    $x = $startX + $col * ($cellW + $gapX);
-                    $y = $startY + $row * ($cellH + $gapY);
-
-                    $mpdf->Image($imagePath, $x, $y, $cellW, $cellH, '', '', true, false);
-                    $imagesAdded++;
-
-                    $col++;
-                    if ($col === $cols) {
-                        $col = 0;
-                        $row++;
                     }
                 }
             }
-
-        } else {
-            // For other folders: one image per page
+        }
+        // For Aadhaar, RC Book, DL, etc. (one image per page)
+        else {
             foreach ($files as $file) {
                 $filename = $includeMetadata ? $file['filename'] : $file;
-                $imagePath = ($folder === 'processed_image')
-                    ? public_path("storage/upload/processed_image/{$filename}")
-                    : public_path("storage/upload/document/claim-749/{$folder}/{$filename}");
+                $folderCode = getFolderCode($folder);
+                $encryptedPath = config('constant.claim_upload_path') . "/{$claimHash}/{$folderCode}/{$filename}";
 
-                if (!file_exists($imagePath)) {
+                if (!file_exists($encryptedPath)) continue;
+
+                try {
+                    $tempPath = sys_get_temp_dir() . '/' . uniqid('pdfimg_') . '.jpg';
+                    $decryptedContent = Crypt::decrypt(file_get_contents($encryptedPath));
+                    file_put_contents($tempPath, $decryptedContent);
+
+                    list($w, $h) = getimagesize($tempPath);
+                    $maxW  = 190;
+                    $maxH  = 277;
+                    $scale = min($maxW / $w, $maxH / $h);
+                    $newW  = $w * $scale;
+                    $newH  = $h * $scale;
+                    $x     = (210 - $newW) / 2;
+                    $y     = (297 - $newH) / 2;
+
+                    $mpdf->AddPage();
+                    $mpdf->WriteHTML("<h4 style='text-align:center; margin-bottom:5mm;'>{$label}</h4>");
+                    $mpdf->Image($tempPath, $x, $y, $newW, $newH, '', '', true, false);
+
+                    unlink($tempPath);
+                    $imagesAdded++;
+                } catch (\Exception $e) {
                     continue;
                 }
-
-                $mpdf->AddPage();
-                $mpdf->WriteHTML("<h3 style='text-align:center; margin-bottom:5mm;'>{$label}</h3>");
-
-                list($w, $h) = getimagesize($imagePath);
-                $maxW  = 190;  // A4 width minus margins
-                $maxH  = 277;  // A4 height minus margins
-                $scale = min($maxW / $w, $maxH / $h);
-                $newW  = $w * $scale;
-                $newH  = $h * $scale;
-                $x     = (210 - $newW) / 2;
-                $y     = (297 - $newH) / 2;
-
-                $mpdf->Image($imagePath, $x, $y, $newW, $newH, '', '', true, false);
-                $imagesAdded++;
             }
         }
 
         return $imagesAdded ? "Images added successfully: {$imagesAdded}" : "No valid images found.";
     }
+
+
+
+
 
     private function cleanOcrResults($ocrResults)
     {
@@ -2714,26 +2475,35 @@ class ClaimController extends Controller
         $mpdf->WriteHTML($html);
 
         // Merge images into the PDF
-        $this->mergeImagesIntoPDF($mpdf, json_decode($claim->aadhaar_files), 'aadhaar', 'Aadhaar');
-        
-        $this->mergeImagesIntoPDF($mpdf, json_decode($claim->rcbook_files), 'rcbook', 'RC-Book');
-        $this->mergeImagesIntoPDF($mpdf, json_decode($claim->dl_files), 'dl', 'Driving License');
-        $this->mergeImagesIntoPDF($mpdf, json_decode($claim->photo_files, true), 'photos', 'Photos', 6, true);
-        // $this->mergeImagesIntoPDF($mpdf, json_decode($claim->photo_files, true), 'photos', 'Photos', 20, true);
-        $this->mergeImagesIntoPDF($mpdf, json_decode($claim->processed_image_files), 'processed_image', 'Processed Images', 20);
+        $this->mergeImagesIntoPDF($mpdf, json_decode($claim->aadhaar_files), 'aadhaar', 'Aadhaar', 6, false, $id);
+        $this->mergeImagesIntoPDF($mpdf, json_decode($claim->pancard_file), 'pan_card', 'Pan Card', 6, false, $id);
+        $this->mergeImagesIntoPDF($mpdf, json_decode($claim->rcbook_files), 'rcbook', 'RC-Book', 6, false, $id);
+        $this->mergeImagesIntoPDF($mpdf, json_decode($claim->dl_files), 'dl', 'Driving License', 6, false, $id);
+        $this->mergeImagesIntoPDF($mpdf, json_decode($claim->other_dl_files), 'other_dl', 'Other Driving License', 6, false, $id);
+        $this->mergeImagesIntoPDF($mpdf, json_decode($claim->tax_receipt_file), 'tax_receipt', 'Tax Receipt', 6, false, $id);
+        $this->mergeImagesIntoPDF($mpdf, json_decode($claim->sales_invoice_file), 'sales_invoice', 'Sales Invoice', 6, false, $id);
+        $this->mergeImagesIntoPDF($mpdf, json_decode($claim->fir_file), 'fir', 'FIR Copy', 6, false, $id);
+
+        $this->mergeImagesIntoPDF($mpdf, json_decode($claim->photo_files, true), 'vehicle', 'Vehicle Photos', 6, true, $id);
+        $this->mergeImagesIntoPDF($mpdf, json_decode($claim->under_repair_photo_files, true), 'under_repair', 'Under Repair Photos', 6, true, $id);
+        $this->mergeImagesIntoPDF($mpdf, json_decode($claim->final_photo_files, true), 'final', 'Final Photos', 6, true, $id);
+        $this->mergeImagesIntoPDF($mpdf, json_decode($claim->processed_image_files), 'processed_image', 'Processed Images', 6,$id);
 
         // Save the main report to a unique temporary file
         $uniqueId = uniqid();
         $mainReportPath = storage_path("temp/main_report_{$uniqueId}.pdf");
         $mpdf->Output($mainReportPath, \Mpdf\Output\Destination::FILE);
 
+        dd("hhh");
         // List of PDF files to merge
         $pdfFiles = [$mainReportPath];
-        $this->addPdfFileToList($pdfFiles, $claim->claim_form_file, 'claimform');
-        $this->addPdfFileToList($pdfFiles, $claim->claim_intimation_file, 'claimintimation');
-        $this->addPdfFileToList($pdfFiles, $claim->satisfaction_voucher_file, 'satisfactionvoucher');
-        $this->addPdfFileToList($pdfFiles, $claim->consent_form_file, 'consentform');
-        $this->addPdfFileToList($pdfFiles, $claim->insurance_file, 'insurance');
+        $this->addPdfFileToList($pdfFiles, $claim->claim_form_file, 'claimform', $id);
+        $this->addPdfFileToList($pdfFiles, $claim->claim_intimation_file, 'claimintimation', $id);
+        $this->addPdfFileToList($pdfFiles, $claim->satisfaction_voucher_file, 'satisfactionvoucher', $id);
+        $this->addPdfFileToList($pdfFiles, $claim->consent_form_file, 'consentform', $id);
+        $this->addPdfFileToList($pdfFiles, $claim->insurance_file, 'insurance', $id);
+        $this->addPdfFileToList($pdfFiles, $claim->insurance_file, 'paymentreceipt', $id);
+        $this->addPdfFileToList($pdfFiles, $claim->insurance_file, 'finalbill', $id);
 
         // Generate a unique output file
         $mergedPdfPath = storage_path("temp/claim_report_{$id}_{$uniqueId}.pdf");
@@ -2768,10 +2538,12 @@ class ClaimController extends Controller
             // Compare vehicle and insurance details
             if ($vehicle->vehicle_chasi_number !== $insurance->chassis_no) {
                 $mismatches[] = 'Chassis Number does not match.';
+                $claim->status = 'documents_mismatched';
             }
 
             if ($vehicle->vehicle_engine_number !== $insurance->engine_no) {
                 $mismatches[] = 'Engine Number does not match.';
+                $claim->status = 'documents_mismatched';
             }
 
             // Check if the insurance is active at the time of the loss date
@@ -2780,6 +2552,7 @@ class ClaimController extends Controller
             // Ensure that the insurance dates are valid
             if ($insurance->insurance_start_date > $lossDate || $insurance->insurance_expiry_date < $lossDate) {
                 $mismatches[] = 'Insurance is not active at the time of the loss date.';
+                $claim->status = 'rejected';
             }
 
             // Check if the vehicle license is valid at the time of the loss date
@@ -2787,10 +2560,12 @@ class ClaimController extends Controller
 
             if ($licenseValidityDate < $lossDate) {
                 $mismatches[] = 'Vehicle license has expired before the loss date.';
+                $claim->status = 'rejected';
             }
 
         } else {
             $mismatches[] = 'Vehicle, Insurance, License, or Claim data is missing.';
+            $claim->status = 'rejected';
         }
 
         // Return a response based on the result of the comparison

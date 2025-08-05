@@ -28,7 +28,7 @@
         </div>
 
         <div class="form-group  col-md-6 col-lg-6">
-            {{Form::label('date',__('Date'),array('class'=>'form-label'))}}
+            {{Form::label('date',__('Intimation Date'),array('class'=>'form-label'))}}
             {{Form::date('date',date('Y-m-d'),array('class'=>'form-control'))}}
         </div>
 
@@ -144,7 +144,7 @@
 
         if (original !== cleaned) {
             input.value = cleaned;
-            errorElement.innerText = 'Special characters and spaces are not allowed.';
+            errorMessage = 'Special characters and spaces are not allowed.';
         } else if (cleaned.length < 20) {
             errorMessage = 'Minimum 20 characters are required.';
         }

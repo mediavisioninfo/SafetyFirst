@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Traits\HasRoles;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use PragmaRX\Google2FA\Google2FA;
-
+use App\Models\Role;
 
 class User extends Authenticatable
 {
@@ -136,4 +136,8 @@ class User extends Authenticatable
         return $this->hasMany(Claim::class);
     }
     
+    public function role()
+    {
+        return $this->belongsTo(Role::class);
+    }
 }

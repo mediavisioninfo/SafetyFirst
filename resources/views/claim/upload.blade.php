@@ -312,32 +312,46 @@
         
         <div class="upload-section">
             <h2>Capture Number Plate</h2>
+
             @if (!empty($claimData[0]['number_plate_file']))
-            <!-- Decode JSON string into an array -->
-            @php
-                $photoFiles = json_decode($claimData[0]['number_plate_file'], true); // Decode JSON string to array
-                if (json_last_error() !== JSON_ERROR_NONE) {
-                    $photoFiles = []; // Fallback to an empty array on error
-                }
-            @endphp
-            <!-- Display existing photos -->
-            <div id="number-plate-preview" class="preview-container">
-                    <img src="{{ asset("storage/upload/document/claim-{$claimId}/number_plate/" . $photoFiles[0]['filename']) }}" alt="Number Plate Image" class="preview-image">
-            </div>
+                @php
+                    $photoFiles = json_decode($claimData[0]['number_plate_file'], true); // decode JSON
+                    if (json_last_error() !== JSON_ERROR_NONE) {
+                        $photoFiles = [];
+                    }
+                    $claimHash = md5($claimId);
+                    $folderCode = getFolderCode('number_plate');
+                @endphp
+
+                <!-- Display all number plate images -->
+                <div id="number-plate-preview" class="preview-container">
+                    @foreach($photoFiles as $photo)
+                        @php
+                            $filename = $photo['filename'] ?? null;
+                            $imageUrl = $filename ? route('secure.image', [$claimHash, $folderCode, 'null', $filename]) : null;
+                        @endphp
+
+                        @if ($imageUrl)
+                            <img src="{{ $imageUrl }}" alt="Number Plate Image" class="preview-image">
+                        @endif
+                    @endforeach
+                </div>
             @else
-            <button id="capture-number-plate" class="upload-btn">Capture Number Plate</button>
+                <button id="capture-number-plate" class="upload-btn">Capture Number Plate</button>
             @endif
-            
-            @if(!empty($claimData[0]['vehicle_number']))
+
+            @if (!empty($claimData[0]['vehicle_number']))
                 <input type="text" id="vehicle-number" value="{{ $claimData[0]['vehicle_number'] }}" class="vehicle-number-input" placeholder="Enter your vehicle number">
             @else
                 <input type="text" id="vehicle-number" class="vehicle-number-input" placeholder="Enter your vehicle number">
                 <span id="vehicle-number-error" class="validation-error" style="color: red;"></span>
             @endif
+
             <button class="upload-btn" id="upload-vehicle-number">Submit</button>
             <div id="vehicle-preview" class="vehicle-preview"></div>
             <div id="number-plate-preview" class="preview-container"></div>
             <button class="upload-btn" data-type="number_plate" style="display:none;">Upload Number Plate</button>
+
             <div class="progress">
                 <div class="progress-bar"></div>
             </div>
@@ -351,9 +365,15 @@
                 </strong>
             </p>
             @if (!empty($claimData[0]['video_file']))
+                    @php
+                        $claimHash = md5($claimId);
+                        $folderCode = getFolderCode('video');
+                        $filename = $claimData[0]['video_file'];
+                        $imageUrl = route('secure.image', [$claimHash, $folderCode, 'null', $filename]);
+                    @endphp
                 <div id="video-preview" class="preview-container">
                     <video controls width="400">
-                        <source src="{{ asset("storage/upload/document/claim-{$claimId}/video/" . $claimData[0]['video_file']) }}" type="video/mp4">
+                        <source src="{{ $imageUrl }}" type="video/mp4">
                         Your browser does not support the video tag.
                     </video>
                 </div>
@@ -412,9 +432,31 @@
         <div class="upload-section">
             <h2>FIR Copy</h2>
             @if(!empty($claimData[0]['fir_file']))
-                <!-- Display FIR Copy -->
+                <!-- Convert JSON string to array if needed -->
+                @php
+                    // Check if it's a JSON string, and decode if necessary
+                    if (is_string($claimData[0]['fir_file'])) {
+                        $firFiles = json_decode($claimData[0]['fir_file'], true); // Decode JSON string to array
+                        // If it's not a valid JSON, use explode for comma-separated string
+                        if (json_last_error() !== JSON_ERROR_NONE) {
+                            $firFiles = explode(',', $claimData[0]['fir_file']);
+                        }
+                    } else {
+                        $firFiles = $claimData[0]['fir_file']; // Already an array
+                    }
+                    $claimHash = md5($claimId);
+                    $folderCode = getFolderCode('fir');
+                @endphp
                 <div id="fir-copy-preview" class="preview-container">
-                    <img src="{{ asset("storage/upload/document/claim-{$claimId}/fir/" . $claimData[0]['fir_file']) }}" alt="FIR Copy" class="preview-image">
+                    @foreach($firFiles as $file)
+                        @php
+                            $filename = $file;
+                            $imageUrl = route('secure.image', [$claimHash, $folderCode, 'null', $filename]); // 'null' placeholder
+                        @endphp
+                        @if (isset($file))
+                            <img src="{{ $imageUrl }}" alt="{{ $filename }}" class="preview-image">
+                        @endif
+                    @endforeach
                 </div>
             @else
             <label for="fir-copy-select">Do you have an FIR copy?</label>
@@ -449,11 +491,18 @@
                     } else {
                         $aadhaarFiles = $claimData[0]['aadhaar_files']; // Already an array
                     }
+                    $claimHash = md5($claimId);
+                    $folderCode = getFolderCode('aadhaar');
                 @endphp
                 <div id="aadhaar-preview" class="preview-container">
                     @foreach($aadhaarFiles as $file)
-                        <img src="{{ asset("storage/upload/document/claim-{$claimId}/aadhaar/" . $file) }}" alt="Aadhaar File" class="preview-image">
-                        <!-- <img src="{{ asset("storage/upload/document/claim-{$claimId}/aadhaar/{$file}") }}" alt="Aadhaar File" class="preview-image"> -->
+                        @php
+                            $filename = $file;
+                            $imageUrl = route('secure.image', [$claimHash, $folderCode, 'null', $filename]); // 'null' placeholder
+                        @endphp
+                        @if (isset($file))
+                            <img src="{{ $imageUrl }}" alt="{{ $filename }}" class="preview-image">
+                        @endif
                     @endforeach
                 </div>
             @else
@@ -481,11 +530,18 @@
                 } else {
                     $panCardFiles = $claimData[0]['pancard_file']; // Already an array
                 }
+                $claimHash = md5($claimId);
+                $folderCode = getFolderCode('pan_card');
             @endphp
             <div id="pan-preview" class="preview-container">
                 @foreach($panCardFiles as $file)
-                    <img src="{{ asset("storage/upload/document/claim-{$claimId}/pan_card/" . $file) }}" alt="Pan Card" class="preview-image">
-                    
+                    @php
+                        $filename = $file;
+                        $imageUrl = route('secure.image', [$claimHash, $folderCode, 'null', $filename]);
+                    @endphp
+                    @if (isset($file))
+                        <img src="{{ $imageUrl }}" alt="{{ $filename }}" class="preview-image">
+                    @endif
                 @endforeach
             </div>
             @else
@@ -530,11 +586,18 @@
                         } else {
                             $rcFiles = $claimData[0]['rcbook_files']; // Already an array
                         }
+                        $claimHash = md5($claimId);
+                        $folderCode = getFolderCode('rcbook');
                     @endphp
                     <div id="rcbook-preview" class="preview-container">
                         @foreach($rcFiles as $file)
-                            <img src="{{ asset("storage/upload/document/claim-{$claimId}/rcbook/" . $file) }}" alt="RC Book" class="preview-image">
-                           
+                            @php
+                                $filename = $file;
+                                $imageUrl = route('secure.image', [$claimHash, $folderCode, 'null', $filename]);
+                            @endphp
+                            @if (isset($file))
+                                <img src="{{ $imageUrl }}" alt="{{ $filename }}" class="preview-image">
+                            @endif
                         @endforeach
                     </div>
                 @endif
@@ -549,11 +612,18 @@
                         } else {
                             $taxReceiptFiles = $claimData[0]['tax_receipt_file'];
                         }
+                        $claimHash = md5($claimId);
+                        $folderCode = getFolderCode('tax_receipt');
                     @endphp
                     <div id="tax_receipt-preview" class="preview-container">
                         @foreach($taxReceiptFiles as $file)
-                            <img src="{{ asset("storage/upload/document/claim-{$claimId}/tax_receipt/" . $file) }}" alt="Tax Receipt" class="preview-image">
-                          
+                            @php
+                                $filename = $file;
+                                $imageUrl = route('secure.image', [$claimHash, $folderCode, 'null', $filename]);
+                            @endphp
+                            @if (isset($file))
+                                <img src="{{ $imageUrl }}" alt="{{ $filename }}" class="preview-image">
+                            @endif
                         @endforeach
                     </div>
                 @endif
@@ -568,11 +638,18 @@
                         } else {
                             $salesInvoiceFiles = $claimData[0]['sales_invoice_file'];
                         }
+                        $claimHash = md5($claimId);
+                        $folderCode = getFolderCode('sales_invoice');
                     @endphp
                     <div id="sales_invoice-preview" class="preview-container">
                         @foreach($salesInvoiceFiles as $file)
-                            <img src="{{ asset("storage/upload/document/claim-{$claimId}/sales_invoice/" . $file) }}" alt="Sales Invoice" class="preview-image">
-                          
+                            @php
+                                $filename = $file;
+                                $imageUrl = route('secure.image', [$claimHash, $folderCode, 'null', $filename]);
+                            @endphp
+                            @if (isset($file))
+                                <img src="{{ $imageUrl }}" alt="{{ $filename }}" class="preview-image">
+                            @endif
                         @endforeach
                     </div>
                 @endif
@@ -587,7 +664,7 @@
                 <!-- If user selects "Yes", show upload section for RC Book -->
                 <div id="rcbook-upload-section" style="display: none;">
                     <h4>Please upload the RC Book:</h4>
-                    <input type="file" id="rcbook" class="file-input" accept="image/*">
+                    <input type="file" id="rcbook" class="file-input" multiple accept="image/*">
                     <div id="rcbook-preview" class="preview-container"></div>
                     <span id="rcbook-error" class="validation-error" style="color: red;"></span>
                     <button class="upload-btn" data-type="rcbook">Upload RC Book</button>
@@ -629,12 +706,19 @@
                         } else {
                             $dlFiles = $claimData[0]['dl_files']; // Already an array
                         }
+                        $claimHash = md5($claimId);
+                        $folderCode = getFolderCode('dl');
                     @endphp
                     <h4>Owner Driving License</h4>
                     <div id="dl-preview" class="preview-container">
                         @foreach($dlFiles as $file)
-                            <img src="{{ asset("storage/upload/document/claim-{$claimId}/dl/" . $file) }}" alt="Driving License" class="preview-image">
-                            
+                            @php
+                                $filename = $file;
+                                $imageUrl = route('secure.image', [$claimHash, $folderCode, 'null', $filename]);
+                            @endphp
+                            @if (isset($file))
+                                <img src="{{ $imageUrl }}" alt="{{ $filename }}" class="preview-image">
+                            @endif
                         @endforeach
                     </div>
                 @endif
@@ -649,12 +733,19 @@
                         } else {
                             $otherDlFiles = $claimData[0]['other_dl_files'];
                         }
+                        $claimHash = md5($claimId);
+                        $folderCode = getFolderCode('other_dl');
                     @endphp
                     <h4>Driver Driving License</h4>
                     <div id="other_dl-preview" class="preview-container">
                         @foreach($otherDlFiles as $file)
-                            <img src="{{ asset("storage/upload/document/claim-{$claimId}/other_dl/" . $file) }}" alt="Tax Receipt" class="preview-image">
-                          
+                            @php
+                                $filename = $file;
+                                $imageUrl = route('secure.image', [$claimHash, $folderCode, 'null', $filename]);
+                            @endphp
+                            @if (isset($file))
+                                <img src="{{ $imageUrl }}" alt="{{ $filename }}" class="preview-image">
+                            @endif
                         @endforeach
                     </div>
                 @endif
@@ -703,13 +794,22 @@
                 } else {
                     $InsuranceFiles = $claimData[0]['insurance_file']; // Already an array
                 }
+                $claimHash = md5($claimId);
+                $folderCode = getFolderCode('insurance');
             @endphp
             <div id="insurance-preview" class="preview-container">
                 @foreach($InsuranceFiles as $file)
-                <a href="{{ asset("storage/upload/document/claim-{$claimId}/insurance/" . $file) }}" target="_blank">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/8/87/PDF_file_icon.svg" alt="PDF Preview" width="100" height="120">
-                    <p>View Full PDF</p>
-                </a>
+                @php
+                    $filename = $file;
+                    $imageUrl = route('secure.image', [$claimHash, $folderCode, 'null', $filename]);
+                @endphp
+                @if (isset($file))
+                    <a href="{{ $imageUrl }}" target="_blank">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/8/87/PDF_file_icon.svg" alt="PDF Preview" width="100" height="120">
+                        <p>View Full PDF</p>
+                    </a>
+                @endif
+                
                 @endforeach
             </div>
             @else
@@ -737,13 +837,21 @@
                 } else {
                     $claimFormFiles = $claimData[0]['claim_form_file']; // Already an array
                 }
+                $claimHash = md5($claimId);
+                $folderCode = getFolderCode('claimform');
             @endphp
             <div id="claimform-preview" class="preview-container">
                 @foreach($claimFormFiles as $file)
-                <a href="{{ asset("storage/upload/document/claim-{$claimId}/claimform/" . $file) }}" target="_blank">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/8/87/PDF_file_icon.svg" alt="PDF Preview" width="100" height="120">
-                    <p>View Full PDF</p>
-                </a>
+                @php
+                    $filename = $file;
+                    $imageUrl = route('secure.image', [$claimHash, $folderCode, 'null', $filename]);
+                @endphp
+                @if (isset($file))
+                    <a href="{{ $imageUrl }}" target="_blank">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/8/87/PDF_file_icon.svg" alt="PDF Preview" width="100" height="120">
+                        <p>View Full PDF</p>
+                    </a>
+                @endif
                 @endforeach
             </div>
             @else
@@ -770,13 +878,21 @@
                 } else {
                     $claimIntimationFiles = $claimData[0]['claim_intimation_file']; // Already an array
                 }
+                $claimHash = md5($claimId);
+                $folderCode = getFolderCode('claimintimation');
             @endphp
             <div id="claimintimation-preview" class="preview-container">
                 @foreach($claimIntimationFiles as $file)
-                <a href="{{ asset("storage/upload/document/claim-{$claimId}/claimintimation/" . $file) }}" target="_blank">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/8/87/PDF_file_icon.svg" alt="PDF Preview" width="100" height="120">
-                    <p>View Full PDF</p>
-                </a>
+                @php
+                    $filename = $file;
+                    $imageUrl = route('secure.image', [$claimHash, $folderCode, 'null', $filename]);
+                @endphp
+                @if (isset($file))
+                    <a href="{{ $imageUrl }}" target="_blank">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/8/87/PDF_file_icon.svg" alt="PDF Preview" width="100" height="120">
+                        <p>View Full PDF</p>
+                    </a>
+                @endif
                 @endforeach
             </div>
             @else
@@ -803,13 +919,21 @@
                 } else {
                     $satisfactionVoucherFiles = $claimData[0]['satisfaction_voucher_file']; // Already an array
                 }
+                $claimHash = md5($claimId);
+                $folderCode = getFolderCode('satisfactionvoucher');
             @endphp
             <div id="satisfactionvoucher-preview" class="preview-container">
                 @foreach($satisfactionVoucherFiles as $file)
-                <a href="{{ asset("storage/upload/document/claim-{$claimId}/satisfactionvoucher/" . $file) }}" target="_blank">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/8/87/PDF_file_icon.svg" alt="PDF Preview" width="100" height="120">
-                    <p>View Full PDF</p>
-                </a>
+                @php
+                    $filename = $file;
+                    $imageUrl = route('secure.image', [$claimHash, $folderCode, 'null', $filename]);
+                @endphp
+                @if (isset($file))
+                    <a href="{{ $imageUrl }}" target="_blank">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/8/87/PDF_file_icon.svg" alt="PDF Preview" width="100" height="120">
+                        <p>View Full PDF</p>
+                    </a>
+                @endif
                 @endforeach
             </div>
             @else
@@ -836,13 +960,21 @@
                 } else {
                     $finalBillFiles = $claimData[0]['final_bill_files']; // Already an array
                 }
+                $claimHash = md5($claimId);
+                $folderCode = getFolderCode('finalbill');
             @endphp
             <div id="finalbill-preview" class="preview-container">
                 @foreach($finalBillFiles as $file)
-                <a href="{{ asset("storage/upload/document/claim-{$claimId}/finalbill/" . $file) }}" target="_blank">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/8/87/PDF_file_icon.svg" alt="PDF Preview" width="100" height="120">
-                    <p>View Full PDF</p>
-                </a>
+                @php
+                    $filename = $file;
+                    $imageUrl = route('secure.image', [$claimHash, $folderCode, 'null', $filename]);
+                @endphp
+                @if (isset($file))
+                    <a href="{{ $imageUrl }}" target="_blank">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/8/87/PDF_file_icon.svg" alt="PDF Preview" width="100" height="120">
+                        <p>View Full PDF</p>
+                    </a>
+                @endif
                 @endforeach
             </div>
             @else
@@ -870,10 +1002,18 @@
                     } else {
                         $paymentReceiptFiles = $claimData[0]['payment_receipt_files']; // Already an array
                     }
+                    $claimHash = md5($claimId);
+                    $folderCode = getFolderCode('paymentreceipt');
                 @endphp
                 <div id="paymentreceipt-preview" class="preview-container">
                     @foreach($paymentReceiptFiles as $file)
-                        <img src="{{ asset("storage/upload/document/claim-{$claimId}/paymentreceipt/" . $file) }}" alt="PaymentReceipt File" class="preview-image">   
+                        @php
+                            $filename = $file;
+                            $imageUrl = route('secure.image', [$claimHash, $folderCode, 'null', $filename]);
+                        @endphp
+                        @if (isset($file))
+                            <img src="{{ $imageUrl }}" alt="{{ $filename }}" class="preview-image">
+                        @endif
                     @endforeach
                 </div>
             @else
@@ -897,14 +1037,14 @@
                     }
                     $photoFiles = json_decode($claimData[0]['photo_files'], true);
                     $claimHash = md5($claimId);
-                    $folderHash = md5('photos');
+                    $folderCode = getFolderCode('vehicle');
                 @endphp
                 <!-- Display existing photos -->
                 <div id="photo-preview" class="preview-container">
                     @foreach ($photoFiles as $file)
                         @php
                             $filename = $file['filename'];
-                            $imageUrl = route('secure.image', [$claimHash, 'vehicle_photos', $filename]);
+                            $imageUrl = route('secure.image', [$claimHash, 'PHX', $folderCode , $filename]);
                         @endphp
                         @if (isset($file['filename']))
                             <img src="{{ $imageUrl }}" alt="{{ $filename }}" class="preview-image">
@@ -956,13 +1096,14 @@
                     }
                     $underRepairFiles = json_decode($claimData[0]['under_repair_photo_files'], true);
                     $claimHash = md5($claimId);
+                    $folderCode = getFolderCode('under_repair');
                 @endphp
                 <!-- Display existing photos -->
                 <div id="photo-preview" class="preview-container">
                     @foreach ($underRepairFiles as $file)
                         @php
                             $filename = $file['filename'];
-                            $imageUrl = route('secure.image', [$claimHash, 'under_repair_photos', $filename]);
+                            $imageUrl = route('secure.image', [$claimHash, 'PHX', $folderCode , $filename]);
                         @endphp
                         @if (isset($file['filename']))
                             <img src="{{ $imageUrl }}" alt="{{ $filename }}" class="preview-image">
@@ -1000,13 +1141,14 @@
                     }
                     $finalPhotoFiles = json_decode($claimData[0]['final_photo_files'], true);
                     $claimHash = md5($claimId);
+                    $folderCode = getFolderCode('final');
                 @endphp
                 <!-- Display existing photos -->
                 <div id="photo-preview" class="preview-container">
                     @foreach ($finalPhotoFiles as $file)
                         @php
                             $filename = $file['filename'];
-                            $imageUrl = route('secure.image', [$claimHash, 'final_photos', $filename]);
+                            $imageUrl = route('secure.image', [$claimHash, 'PHX', $folderCode , $filename]);
                         @endphp
                         @if (isset($file['filename']))
                             <img src="{{ $imageUrl }}" alt="{{ $filename }}" class="preview-image">
@@ -1251,6 +1393,24 @@
                 uploadOption?.addEventListener("change", toggleAction);
                 toggleAction();
             });
+
+            // Capture button logic for all three sections
+            const captureHandlers = {
+                "capture-photo": () => alert("Damage vehicle capture clicked"),
+                "capture-repair-photo": () => alert("Under repair capture clicked"),
+                "capture-final-photo": () => alert("Final photo capture clicked")
+            };
+
+            Object.keys(captureHandlers).forEach(id => {
+                const btn = document.getElementById(id);
+                if (btn) {
+                    btn.addEventListener("click", (e) => {
+                        e.preventDefault();
+                        captureHandlers[id]();
+                        // You can replace alert with actual camera logic
+                    });
+                }
+            });
         });
 
 
@@ -1478,7 +1638,6 @@
                             percentCompleted);
                     }
                 }).then(function(response) {
-                    alert(`${documentType} uploaded successfully!!!`);
                     progressBar.parent().hide();
                     console.log(`${documentType} uploaded successfully`);
                     alert(`${documentType} uploaded successfully!!!`);
@@ -1495,11 +1654,28 @@
 
             // Photo capture functionality
             let photoCount = 0;
+            // const maxPhotos = 20;
+
+            const sectionPhotoCounts = {
+                photos: 0,
+                under_repair: 0,
+                final: 0
+            };
             const maxPhotos = 20;
 
             $('#capture-photo').on('click', function() {
                 if (photoCount < maxPhotos) {
                     captureMedia('image');
+                }
+            });
+            $('#capture-repair-photo').on('click', function() {
+                if (photoCount < maxPhotos) {
+                    captureMedia('under_repair');
+                }
+            });
+            $('#capture-final-photo').on('click', function() {
+                if (photoCount < maxPhotos) {
+                    captureMedia('final');
                 }
             });
 
@@ -1532,7 +1708,7 @@
                 });
             }
             // Modify the capturePhoto function
-            async function capturePhoto(videoElement, stream) {
+            async function capturePhoto(videoElement, stream, section) {
                 const canvas = document.createElement('canvas');
                 canvas.width = videoElement.videoWidth;
                 canvas.height = videoElement.videoHeight;
@@ -1549,17 +1725,34 @@
                     captureTime: captureTime
                 };
 
-                const previewItem = createPhotoPreview(photoData);
-                $('#photo-preview').append(previewItem);
+                // const previewItem = createPhotoPreview(photoData);
+                // $('#photo-preview').append(previewItem);
 
+                const previewItem = createPhotoPreview(photoData);
+
+                // Append to section-specific preview area
+                if (section === 'photos') {
+                    $('#photo-preview').append(previewItem);
+                } else if (section === 'under_repair') {
+                    $('#repair-photo-preview').append(previewItem);
+                } else if (section === 'final') {
+                    $('#final-photo-preview').append(previewItem);
+                }
+                
                 stream.getTracks().forEach(track => track.stop());
                 document.getElementById('camera-modal').style.display = 'none';
 
-                photoCount++;
-                if (photoCount === maxPhotos) {
-                    $('#capture-photo').prop('disabled', true);
+                 // Increment the photo count for this section
+                sectionPhotoCounts[section]++;
+                if (sectionPhotoCounts[section] >= maxPhotos) {
+                    // Disable only that section's capture button
+                    if (section === 'photos') $('#capture-photo').prop('disabled', true);
+                    else if (section === 'under_repair') $('#capture-repair-photo').prop('disabled', true);
+                    else if (section === 'final') $('#capture-final-photo').prop('disabled', true);
                 }
-                $('.upload-btn[data-type="photos"]').show();
+
+                // Show only relevant upload button
+                $('.upload-btn[data-type="' + section + '"]').show();
             }
 
             // Modify the createPhotoPreview function
@@ -1672,7 +1865,17 @@
                         if (mediaType === 'image') {
                             captureButton.textContent = 'Capture Photo';
                             captureButton.onclick = function() {
-                                capturePhoto(videoElement, stream);
+                                capturePhoto(videoElement, stream,'photos');
+                            };
+                        } else if (mediaType === 'under_repair') {
+                            captureButton.textContent = 'Capture Photo';
+                            captureButton.onclick = function() {
+                                capturePhoto(videoElement, stream, 'under_repair');
+                            };
+                        } else if (mediaType === 'final') {
+                            captureButton.textContent = 'Capture Photo';
+                            captureButton.onclick = function() {
+                                capturePhoto(videoElement, stream,'final');
                             };
                         } else if (mediaType === 'number_plate') {
                             captureButton.textContent = 'Capture Photo';
@@ -1699,154 +1902,6 @@
                         );
                     });
             }
-
-            // Modify the upload function for photos
-            // $('.upload-btn[data-type="photos"]').on('click', function() {
-            //     const formData = new FormData();
-            //     $('#photo-preview .preview-item').each(function(index, item) {
-            //         const photoData = $(item).data('photoData');
-            //         if (photoData) {
-            //             fetch(photoData.imageDataUrl)
-            //                 .then(res => res.blob())
-            //                 .then(blob => {
-            //                     formData.append(`files[]`, blob, `photo_${index + 1}.jpg`);
-            //                     formData.append(`geotags[${index}]`, JSON.stringify(photoData
-            //                         .geotag));
-            //                     formData.append(`captureTimes[${index}]`, photoData.captureTime);
-            //                     if (index === $('#photo-preview .preview-item').length - 1) {
-            //                         uploadCapturedMedia(formData, 'photos');
-            //                     }
-            //             });
-            //         }
-            //     });
-
-            //     // Handle uploaded images
-            //     const fileInput = document.getElementById('photo'); // The file input element
-            //     if (fileInput && fileInput.files.length > 0) {
-            //         Array.from(fileInput.files).forEach((file, index) => {
-            //             const uploadedIndex = $('#photo-preview .preview-item').length + index;
-            //             formData.append(`files[]`, file, `uploaded_photo_${uploadedIndex + 1}.jpg`);
-            //             formData.append(`geotags[${uploadedIndex}]`, 'null'); // No geotag for uploaded images
-            //             formData.append(`captureTimes[${uploadedIndex}]`, new Date().toISOString());
-            //         });
-            //     }
-
-            //     // After both captured and uploaded images are added, upload the formData
-            //     uploadCapturedMedia(formData, 'photos');
-            // });
-
-            /*$('.upload-btn[data-type="photos"]').on('click', function() {
-                const formData = new FormData();
-
-                // Helper to overlay a larger, formatted timestamp onto the image
-                function stampImage(imageDataUrl, timestamp) {
-                    return new Promise((resolve, reject) => {
-                        const img = new Image();
-                        img.onload = () => {
-                            const canvas = document.createElement('canvas');
-                            canvas.width  = img.width;
-                            canvas.height = img.height;
-                            const ctx = canvas.getContext('2d');
-
-                            // Draw the original image
-                            ctx.drawImage(img, 0, 0);
-
-                            // Format timestamp as dd/mm/yyyy hh:mm:ss (12-hour format without AM/PM)
-                            const dt = new Date(timestamp);
-                            const text = [
-                            String(dt.getDate()).padStart(2, '0'),
-                            String(dt.getMonth() + 1).padStart(2, '0'),
-                            dt.getFullYear()
-                            ].join('/') + ' ' + [
-                            String(dt.getHours() % 12 || 12), // 12-hour hour, no leading zero
-                            String(dt.getMinutes()).padStart(2, '0'),
-                            String(dt.getSeconds()).padStart(2, '0')
-                            ].join(':');
-
-                            // Choose a big font: 5% of image height
-                            const fontSize = Math.round(canvas.height * 0.05);
-                            ctx.font = `bold ${fontSize}px Arial`;
-                            ctx.textBaseline = 'bottom';
-                            ctx.textAlign = 'right';
-
-                            // Compute background box dimensions
-                            const padding = Math.round(fontSize * 0.3);
-                            const textWidth = ctx.measureText(text).width;
-                            const boxWidth  = textWidth + padding * 2;
-                            const boxHeight = fontSize + padding * 2;
-                            const x = canvas.width  - boxWidth - padding;
-                            const y = canvas.height - boxHeight - padding;
-
-                            // Draw semi-transparent box
-                            ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-                            ctx.fillRect(x, y, boxWidth, boxHeight);
-
-                            // Draw white timestamp text
-                            ctx.fillStyle = 'white';
-                            ctx.fillText(text, canvas.width - padding, canvas.height - padding);
-
-                            // Export to JPEG blob
-                            canvas.toBlob(blob => {
-                                if (blob) resolve(blob);
-                                else reject(new Error('Canvas toBlob failed'));
-                            }, 'image/jpeg', 0.95);
-                        };
-                        img.onerror = reject;
-                        img.src = imageDataUrl;
-                    });
-                }
-
-                // 1) Process existing preview captures
-                const previews = $('#photo-preview .preview-item').toArray();
-                const capturePromises = previews.map((item, idx) => {
-                    const photoData = $(item).data('photoData');
-                    if (!photoData || !photoData.imageDataUrl) {
-                        console.warn(`Skipping preview #${idx + 1}: no photoData`);
-                        return Promise.resolve();
-                    }
-                    const { imageDataUrl, captureTime, geotag } = photoData;
-                    return stampImage(imageDataUrl, captureTime)
-                        .then(watermarkedBlob => {
-                            formData.append('files[]', watermarkedBlob, `photo_${idx + 1}.jpg`);
-                            formData.append(`geotags[${idx}]`, JSON.stringify(geotag));
-                            formData.append(`captureTimes[${idx}]`, captureTime);
-                        });
-                });
-
-                // 2) Process newly selected files
-                const fileInput     = document.getElementById('photo');
-                const uploadedFiles = fileInput?.files ? Array.from(fileInput.files) : [];
-                const uploadPromises = uploadedFiles.map((file, i) => {
-                    const timestamp = new Date().toISOString();
-                    return new Promise((resolve, reject) => {
-                        const reader = new FileReader();
-                        reader.onload = () => {
-                            stampImage(reader.result, timestamp)
-                                .then(watermarkedBlob => {
-                                    const idx = previews.length + i;
-                                    formData.append('files[]', watermarkedBlob, `photo_${idx + 1}.jpg`);
-                                    formData.append(`geotags[${idx}]`, 'null');
-                                    formData.append(`captureTimes[${idx}]`, timestamp);
-                                    resolve();
-                                })
-                                .catch(reject);
-                        };
-                        reader.onerror = reject;
-                        reader.readAsDataURL(file);
-                    });
-                });
-
-                // 3) When all stamping is done, send to server
-                Promise.all([...capturePromises, ...uploadPromises])
-                    .then(() => {
-                        uploadCapturedMedia(formData, 'photos');
-                    })
-                    .catch(err => {
-                        console.error('Image processing error:', err);
-                        alert('Failed to prepare images for upload.');
-                    });
-            });*/
-
             // Define globally
             function stampImage(imageDataUrl, timestamp) {
                 return new Promise((resolve, reject) => {
@@ -1964,21 +2019,6 @@
                     });
             });
 
-
-
-
-            // Upload captured video
-            // $('.upload-btn[data-type="video"]').on('click', function() {
-            //     alert();
-            //     // const formData = new FormData();
-            //     // const videoBlob = new Blob(recordedChunks, {
-            //     //     type: 'video/mp4'
-            //     // });
-            //     // formData.append('files[]', videoBlob, 'captured_video.mp4');
-            //     // uploadCapturedMedia(formData, 'video');
-            // });
-
-
             $('.upload-btn[data-type="video"]').on('click', function() {
                 // Get the selected file from input field
                 const fileInput = document.getElementById("existingVideo");
@@ -2022,14 +2062,20 @@
                             percentCompleted);
                     }
                 }).then(function(response) {
-                alert(type);
-                    alert(`${type} uploaded successfully!`);
                     progressBar.parent().hide();
                     if (type === 'photos') {
                         $('#photo-preview').html('');
                         photoCount = 0;
                         $('#capture-photo').prop('disabled', false);
-                    } else if (type === 'video') {
+                    } else if(type === 'under_repair') {
+                         $('#repair-photo-preview').html('');
+                        photoCount = 0;
+                        $('#capture-repair-photo').prop('disabled', false);
+                    } else if(type === 'final') {
+                         $('#final-photo-preview').html('');
+                        photoCount = 0;
+                        $('#capture-final-photo').prop('disabled', false);
+                    }else if (type === 'video') {
                         $('#video-preview').html('');
                         recordedChunks = [];
                     } else if (type === 'number_plate') {

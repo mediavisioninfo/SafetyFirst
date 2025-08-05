@@ -27,7 +27,7 @@
 
         <div class="form-group col-md-6">
             {{ Form::label('company_id', __('Select Insurance Company'),['class'=>'form-label']) }}
-            {!! Form::select('company_id', $companies, null,array('class' => 'form-control hidesearch','required'=>'required')) !!}
+            {!! Form::select('company_id[]', $companies, null, ['class' => 'form-control hidesearch', 'multiple' => 'multiple', 'required']) !!}
         </div>
     </div>
 </div>
