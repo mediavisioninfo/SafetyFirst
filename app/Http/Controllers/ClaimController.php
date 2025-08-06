@@ -274,57 +274,59 @@ class ClaimController extends Controller
            } catch (\Exception $e) {
            
            }
-            $authKey = env('SMSCOUNTRY_AUTHKEY');
-            $authToken = env('SMSCOUNTRY_AUTHTOKEN');
-            $senderId = env('SMSCOUNTRY_SENDERID');
+            if($claim->status = 'link_shared'){
+                $authKey = env('SMSCOUNTRY_AUTHKEY');
+                $authToken = env('SMSCOUNTRY_AUTHTOKEN');
+                $senderId = env('SMSCOUNTRY_SENDERID');
 
-            $auth = base64_encode("$authKey:$authToken");
+                $auth = base64_encode("$authKey:$authToken");
 
-            // Define both numbers
-            $numbers = [];
+                // Define both numbers
+                $numbers = [];
 
-            // Normalize and add claim user mobile
-            $mobile = $request->mobile;
-            if (substr($mobile, 0, 3) === '+91') {
-                $mobile = substr($mobile, 3);
-            } elseif (substr($mobile, 0, 1) === '0') {
-                $mobile = substr($mobile, 1);
-            }
-            $numbers[] = '91' . $mobile;
+                // Normalize and add claim user mobile
+                $mobile = $request->mobile;
+                if (substr($mobile, 0, 3) === '+91') {
+                    $mobile = substr($mobile, 3);
+                } elseif (substr($mobile, 0, 1) === '0') {
+                    $mobile = substr($mobile, 1);
+                }
+                $numbers[] = '91' . $mobile;
 
-            // Normalize and add workshop mobile number
-            $workshopMobile = $request->workshop_mobile_number;
-            if (substr($workshopMobile, 0, 3) === '+91') {
-                $workshopMobile = substr($workshopMobile, 3);
-            } elseif (substr($workshopMobile, 0, 1) === '0') {
-                $workshopMobile = substr($workshopMobile, 1);
-            }
-            $numbers[] = '91' . $workshopMobile;
+                // Normalize and add workshop mobile number
+                $workshopMobile = $request->workshop_mobile_number;
+                if (substr($workshopMobile, 0, 3) === '+91') {
+                    $workshopMobile = substr($workshopMobile, 3);
+                } elseif (substr($workshopMobile, 0, 1) === '0') {
+                    $workshopMobile = substr($workshopMobile, 1);
+                }
+                $numbers[] = '91' . $workshopMobile;
 
-            // Send SMS to each number
-            foreach ($numbers as $number) {
-                $data = [
-                    "Text" => "Dear ABC, To process your Car insurance claim -Claim No: $request->claim_id, please upload the required documents at: $uploadLink For help, call 080-62965696. Regards SafetyFirst",
-                    "Number" => $number,
-                    "SenderId" => $senderId,
-                    "TemplateId" => "1707174703017862364",
-                    "Is_Unicode" => false
-                ];
+                // Send SMS to each number
+                foreach ($numbers as $number) {
+                    $data = [
+                        "Text" => "Dear ABC, To process your Car insurance claim -Claim No: $request->claim_id, please upload the required documents at: $uploadLink For help, call 080-62965696. Regards SafetyFirst",
+                        "Number" => $number,
+                        "SenderId" => $senderId,
+                        "TemplateId" => "1707174703017862364",
+                        "Is_Unicode" => false
+                    ];
 
-                $response = Http::withHeaders([
-                    'Authorization' => "Basic $auth",
-                    'Content-Type' => 'application/json'
-                ])->post("https://restapi.smscountry.com/v0.1/Accounts/$authKey/SMSes", $data);
+                    $response = Http::withHeaders([
+                        'Authorization' => "Basic $auth",
+                        'Content-Type' => 'application/json'
+                    ])->post("https://restapi.smscountry.com/v0.1/Accounts/$authKey/SMSes", $data);
 
-                $responseData = $response->json();
+                    $responseData = $response->json();
 
-                if (!empty($responseData['Success'])) {
-                    \Log::info("SMS successfully queued", [
-                        'uuid' => $responseData['MessageUUID'],
-                        'mobile' => $number
-                    ]);
-                } else {
-                    \Log::error('SMSCountry failed', ['mobile' => $number, 'response' => $response->body()]);
+                    if (!empty($responseData['Success'])) {
+                        \Log::info("SMS successfully queued", [
+                            'uuid' => $responseData['MessageUUID'],
+                            'mobile' => $number
+                        ]);
+                    } else {
+                        \Log::error('SMSCountry failed', ['mobile' => $number, 'response' => $response->body()]);
+                    }
                 }
             }
         
@@ -905,6 +907,66 @@ class ClaimController extends Controller
             $claim->insurance_company_id = $request->insurance_company_id;
 
             $claim->save();
+
+            if($request->status = 'link_shared'){
+                $uploadLink = route('claim.upload', ['id' => Crypt::encrypt($claim->id)]);
+                $uploadLink = $this->shortenUrl7($uploadLink); // Use your own domain here
+                
+                $authKey = env('SMSCOUNTRY_AUTHKEY');
+                $authToken = env('SMSCOUNTRY_AUTHTOKEN');
+                $senderId = env('SMSCOUNTRY_SENDERID');
+
+                $auth = base64_encode("$authKey:$authToken");
+
+                // Define both numbers
+                $numbers = [];
+
+                // Normalize and add claim user mobile
+                $mobile = $request->mobile;
+                if (substr($mobile, 0, 3) === '+91') {
+                    $mobile = substr($mobile, 3);
+                } elseif (substr($mobile, 0, 1) === '0') {
+                    $mobile = substr($mobile, 1);
+                }
+                $numbers[] = '91' . $mobile;
+
+                // Normalize and add workshop mobile number
+                $workshopMobile = $request->workshop_mobile_number;
+                if (substr($workshopMobile, 0, 3) === '+91') {
+                    $workshopMobile = substr($workshopMobile, 3);
+                } elseif (substr($workshopMobile, 0, 1) === '0') {
+                    $workshopMobile = substr($workshopMobile, 1);
+                }
+                $numbers[] = '91' . $workshopMobile;
+
+                // Send SMS to each number
+                foreach ($numbers as $number) {
+                    $data = [
+                        "Text" => "Dear ABC, To process your Car insurance claim -Claim No: $request->claim_id, please upload the required documents at: $uploadLink For help, call 080-62965696. Regards SafetyFirst",
+                        "Number" => $number,
+                        "SenderId" => $senderId,
+                        "TemplateId" => "1707174703017862364",
+                        "Is_Unicode" => false
+                    ];
+
+                    $response = Http::withHeaders([
+                        'Authorization' => "Basic $auth",
+                        'Content-Type' => 'application/json'
+                    ])->post("https://restapi.smscountry.com/v0.1/Accounts/$authKey/SMSes", $data);
+
+                    $responseData = $response->json();
+
+                    if (!empty($responseData['Success'])) {
+                        \Log::info("SMS successfully queued", [
+                            'uuid' => $responseData['MessageUUID'],
+                            'mobile' => $number
+                        ]);
+                    } else {
+                        \Log::error('SMSCountry failed', ['mobile' => $number, 'response' => $response->body()]);
+                    }
+                }
+            }
+
             $this->logClaimAction(
                 $claim,
                 'update',

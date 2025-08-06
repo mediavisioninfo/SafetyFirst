@@ -347,3 +347,9 @@ Route::post('/claims/add-document', [ClaimController::class, 'addDocument'])->na
 // gst management
 Route::get('gst-manage', [GstManagementController::class, 'index'])->name('gst.manage');
 Route::put('gst-manage', [GstManagementController::class, 'update'])->name('gst.update');
+
+Route::post('/auto-logout', function () {
+    \Auth::logout();
+    \Session::flush();
+    return response()->json(['message' => 'Logged out']);
+})->name('auto.logout');

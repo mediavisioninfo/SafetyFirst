@@ -49,23 +49,40 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
     <!-- ✅ Force expire OTP session on page unload/back -->
-    <!-- <script>
-        // If user presses back button and page is cached, reload the page
+    <script>
+         // Detect back/forward navigation
         window.addEventListener("pageshow", function (event) {
             if (event.persisted || performance.getEntriesByType("navigation")[0].type === "back_forward") {
-                window.location.reload();
+                // alert();
+                autoLogout();
             }
         });
 
+        // Also handle popstate (browser navigation)
+        window.addEventListener("popstate", function () {
+            autoLogout();
+        });
+
+        function autoLogout() {
+            fetch("{{ route('auto.logout') }}", {
+                method: "POST",
+                headers: {
+                    "X-CSRF-TOKEN": '{{ csrf_token() }}',
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({})
+            }).then(() => {
+                // Optionally redirect to login or show expired message
+                window.location.href = "{{ route('login') }}";
+            });
+        }
+
+        // Optional: Expire OTP when unloading the page
         function expireOtpSession() {
             navigator.sendBeacon("{{ route('claim.otp.expire', ['claim_id' => $claimId]) }}");
         }
-
-        // Trigger on tab close, refresh, or navigation away
         window.addEventListener('beforeunload', expireOtpSession);
-        // Trigger on back button
-        window.addEventListener('popstate', expireOtpSession);
-    </script> -->
+    </script>
 </body>
 
 </html>
