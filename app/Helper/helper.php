@@ -9,7 +9,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
-
+      
 if (!function_exists('settingsKeys')) {
     function settingsKeys()
     {
