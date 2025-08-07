@@ -1,0 +1,25 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      php: 8.2 # Make sure this matches your EC2 PHP version
+  pre_build:
+    commands:
+      - echo Installing Composer dependencies...
+      - composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+  build:
+    commands:
+      - echo Build started on `date`
+      # - npm install # Uncomment if you have JS dependencies
+      # - npm run build # Uncomment to compile CSS/JS assets
+      - echo Caching Laravel configurations...
+      - php artisan config:cache
+      - php artisan route:cache
+      - php artisan view:cache
+  post_build:
+    commands:
+      - echo Build completed on `date`
+artifacts:
+  files:
+    - '**/*' # This packages up all files for the next stage
