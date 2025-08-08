@@ -6,6 +6,8 @@ phases:
       php: 8.2 # Make sure this matches your EC2 PHP version
   pre_build:
     commands:
+      - echo Setting HOME directory
+      - export HOME=/root
       - echo Installing Composer dependencies...
       - composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
   build:
