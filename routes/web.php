@@ -31,6 +31,9 @@ use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Http\Request;
 use App\Models\ShortUrl;
+use App\Http\Controllers\EmailController;
+use App\Http\Controllers\Auth\TwoFactorController;
+
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -69,9 +72,17 @@ Route::resource('users', UserController::class)->middleware(
     ]
 );
 
+// web.php
+Route::post('/switch-company/{id}', [HomeController::class, 'switch'])->name('switch.company');
 
 //-------------------------------Subscription-------------------------------------------
 
+Route::middleware('auth')->group(function () {
+    Route::get('/2fa-selection', [TwoFactorController::class, 'selection'])->name('2fa.selection');
+    Route::post('/2fa-send', [TwoFactorController::class, 'sendCode'])->name('2fa.sendCode');
+    Route::get('/2fa-verify', [TwoFactorController::class, 'verifyForm'])->name('2fa.verifyForm');
+    Route::post('/2fa-verify', [TwoFactorController::class, 'verify'])->name('2fa.verify');
+});
 
 Route::group(
     [
@@ -331,6 +342,13 @@ Route::post('/claim/{id}/remove-part1', [ClaimController::class, 'removeLabourPa
 Route::post('/claims/assign', [ClaimController::class, 'assignClaims'])->name('claim.assign');
 //Recheck the claims
 Route::get('/recheck/{claimId}', [ClaimController::class, 'checkVehicleInsuranceMatch'])->name('claim.recheck');
+
+//Send Mail to WOrkshop
+Route::get('/emails', [EmailController::class, 'index'])->name('emails.index');
+Route::get('/template/{id}/claim/{claimId}', [EmailController::class, 'getTemplate']);
+Route::post('/emails', [EmailController::class, 'store'])->name('emails.store');
+Route::post('/ckeditor/image-upload', [EmailController::class, 'uploadDocument'])->name('ckeditor.upload.document');
+
 //Route::get('claim-logs', [ClaimLogController::class, 'index'])->name('claim.logs');
 Route::get('/claim/changes/{id}', [ClaimLogController::class, 'showChanges'])->name('claim.changes');
 Route::get('/claim-log/{id}', [ClaimLogController::class, 'show'])->name('claim.log');

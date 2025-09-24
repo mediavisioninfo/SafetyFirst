@@ -610,6 +610,7 @@ if (!function_exists('userLoggedHistory')) {
                 'vehicle'             => 'VPH',
                 'under_repair'        => 'URP',
                 'final'               => 'FIP',
+                'send_mail'           => 'EML',
             ];
 
             return $folderMap[$documentType] ?? 'unknown';

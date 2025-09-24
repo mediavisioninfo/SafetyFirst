@@ -11,6 +11,8 @@ class ProfessionalFeeController extends Controller
 
     public function createOrUpdate(Request $request, $claimId, $id = null)
     {
+        // Get active company id from session
+        $activeCompanyId = session('active_company_id');
         // Validate the request data
         $validatedData = $request->validate([
             'professional_fee' => 'required|numeric',
@@ -31,7 +33,6 @@ class ProfessionalFeeController extends Controller
             'sgst' => 'required|numeric',
             'igst' => 'nullable|numeric',
             'net_total' => 'required|numeric',
-            
             // Bank Details (Fixed naming mismatch)
             'bank_name' => 'required|string|max:255',
             'branch_name' => 'required|string|max:255',
@@ -39,15 +40,16 @@ class ProfessionalFeeController extends Controller
             'account_number' => 'required|string|max:20', // Fixed: Changed 'bank_account' → 'account_number'
             'ifsc_code' => 'required|string|max:11',
             'micr_code' => 'nullable|string|max:9',
-            
             // Additional fields
             'id_no' => 'nullable|string|max:20',
             'gstin' => 'nullable|string|max:20',
+            'company_id' => 'nullable|string|max:20',
         ]);
         
 
         // Add the claim ID manually to the validated data
         $validatedData['claim_id'] = $claimId;
+        $validatedData['company_id'] = $activeCompanyId;
 
         // dd($validatedData);
         // Check if the ID is provided and if the record exists

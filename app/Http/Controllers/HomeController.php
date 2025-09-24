@@ -14,12 +14,15 @@ use App\Models\User;
 use App\Models\Claim;
 use Carbon\Carbon;
 use App\Models\ProfessionalFee;
+use Illuminate\Support\Facades\Session;
 
 class HomeController extends Controller
 {
     public function index()
     {
         if (\Auth::check()) {
+            $activeCompanyId = session('active_company_id');
+
             if (\Auth::user()->type == 'super admin') {
                 $result['totalOrganization'] = User::where('type', 'owner')->count();
                 $result['totalSubscription'] = Subscription::count();
@@ -32,19 +35,28 @@ class HomeController extends Controller
 
                 return view('dashboard.super_admin', compact('result'));
             } else {
-                $result['Claim Intimated'] = Claim::where('status', 'claim_intimated')->count();
-                $result['Documents Pending'] = Claim::where('status', 'documents_pending')->count();
-                $result['Documents Submitted'] = Claim::where('status', 'documents_submitted')->count();
-                $result['Under Review'] = Claim::where('status', 'under_review')->count();
-                $result['Rejected'] = Claim::where('status', 'rejected')->count();
-                $result['Approved'] = Claim::where('status', 'approved')->count();
-                $result['totalAgent'] = User::where('parent_id', parentId())->where('type','agent')->count();
+                $result['Claim Intimated'] = Claim::where('status', 'claim_intimated')
+                    ->where('insurance_company_id', $activeCompanyId)->count();
+                $result['Documents Pending'] = Claim::where('status', 'documents_pending')
+                    ->where('insurance_company_id', $activeCompanyId)->count();
+                $result['Documents Submitted'] = Claim::where('status', 'documents_submitted')
+                    ->where('insurance_company_id', $activeCompanyId)->count();
+                $result['Under Review'] = Claim::where('status', 'under_review')
+                    ->where('insurance_company_id', $activeCompanyId)->count();
+                $result['Rejected'] = Claim::where('status', 'rejected')
+                    ->where('insurance_company_id', $activeCompanyId)->count();
+                $result['Approved'] = Claim::where('status', 'approved')
+                    ->where('insurance_company_id', $activeCompanyId)->count();
+
+                $result['totalAgent'] = User::where('parent_id', parentId())
+                    ->where('type','agent')
+                    ->count();
                 $result['totalPolicy'] = Policy::where('parent_id', parentId())->count();
                 $result['totalInsurance'] = Insurance::where('parent_id', parentId())->count();
                 $result['paymentOverview'] = $this->paymentOverview();
                 $result['settings']=settings();
 
-                return view('dashboard.index', compact('result'));
+                return view('dashboard.index', compact('result', 'activeCompanyId'));
             }
         } else {
             if (!file_exists(setup())) {
@@ -129,35 +141,50 @@ class HomeController extends Controller
     // }
 
     public function paymentOverview()
-{
-    // Initialize month range for current year
-    $start = Carbon::createFromDate(date('Y'), 1, 1);
-    $end = Carbon::createFromDate(date('Y'), 12, 1);
+    {
+        // Get active company id from session
+        $activeCompanyId = session('active_company_id');
 
-    $payment = [
-        'label' => [],
-        'payment' => [],
-    ];
+        // Initialize month range for current year
+        $start = Carbon::createFromDate(date('Y'), 1, 1);
+        $end = Carbon::createFromDate(date('Y'), 12, 1);
 
-    while ($start->lte($end)) {
-        $month = $start->month;
-        $year = $start->year;
+        $payment = [
+            'label' => [],
+            'payment' => [],
+        ];
 
-        // Label like Jan-2025
-        $payment['label'][] = $start->format('M-Y');
+        while ($start->lte($end)) {
+            $month = $start->month;
+            $year = $start->year;
 
-        // Sum of total_amount for the month from ProfessionalFee
-        $sum = ProfessionalFee::whereMonth('created_at', $month)
-                ->whereYear('created_at', $year)
-                ->sum('total_amount');
+            // Label like Jan-2025
+            $payment['label'][] = $start->format('M-Y');
 
-        $payment['payment'][] = $sum;
+            // Query: sum for specific company and month
+            $query = ProfessionalFee::whereMonth('created_at', $month)
+                ->whereYear('created_at', $year);
 
-        // Move to next month
-        $start->addMonth();
+            if ($activeCompanyId) {
+                $query->where('company_id', $activeCompanyId);
+            }
+
+            $sum = $query->sum('total_amount');
+
+            $payment['payment'][] = $sum;
+
+            // Move to next month
+            $start->addMonth();
+        }
+
+        return $payment;
     }
 
-    return $payment;
-}
+    public function switch($id)
+    {
+        // set new active company in session
+        session(['active_company_id' => $id]);
+        return redirect()->route('dashboard')->with('success', 'Switched company successfully.');
+    }
 
 }

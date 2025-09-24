@@ -54,6 +54,8 @@ use Intervention\Image\ImageManagerStatic as Image;
 use FPDF;
 use App\Models\State;
 use App\Models\City;
+use App\Models\EmailTemplate;
+use App\Models\Email;
 use App\Models\InsuranceCompany;
 use thiagoalessio\TesseractOCR\TesseractOCR;
 use Illuminate\Support\Facades\Session;
@@ -69,13 +71,35 @@ class ClaimController extends Controller
         $this->ocrApiKey = Config::get('services.ocr.api_key');
     }
 
+    //
     public function index(Request $request)
     {
         if (\Auth::user()->can('manage claim')) {
 
             $user = \Auth::user();
-            // Base query depending on user type
             $query = Claim::where('parent_id', parentId());
+
+
+            // Active company from session (for switch account)
+            // Added insurance_company_id filter based on user->company_id
+            // Date: 21-08-2025 added  by Tanuja
+            // ---------------------------------------------
+            $activeCompanyId = session('active_company_id');
+
+            // If user has switched company → always filter by active company
+            if ($activeCompanyId) {
+                $query->where('insurance_company_id', $activeCompanyId);
+            } else {
+                // Else fall back to user->company_id (single or CSV)
+                if (!empty($user->company_id)) {
+                    if (is_numeric($user->company_id)) {
+                        $query->where('insurance_company_id', $user->company_id);
+                    } else {
+                        $companyIds = explode(',', $user->company_id);
+                        $query->whereIn('insurance_company_id', $companyIds);
+                    }
+                }
+            }
 
             if ($user->type === 'Operator') {
                 $query->where('user_id', $user->id);
@@ -84,8 +108,8 @@ class ClaimController extends Controller
             if ($user->type === 'workshop') {
                 $query->where('user_id', $user->id);
             }
-            
-            // Apply date range filters if provided
+
+            // ---- Date filter logic same as before ----
             if ($request->filled('date_filter') && !$request->filled('start_date') && !$request->filled('end_date')) {
                 switch ($request->date_filter) {
                     case 'today':
@@ -106,9 +130,6 @@ class ClaimController extends Controller
                     case 'this_year':
                         $query->whereYear('created_at', Carbon::now()->year);
                         break;
-                    default:
-                        \Log::warning('Unknown filter: ' . $request->date_filter);
-                        break;
                 }
             }
             elseif ($request->filled('start_date') && $request->filled('end_date')) {
@@ -117,9 +138,8 @@ class ClaimController extends Controller
                 $query->whereBetween('created_at', [$startDate, $endDate]);
             }
 
-            // Vehicle type filter from request
-            $vehicleType = $request->input('vehicle_type'); // dropdown name="vehicle_type"
-
+            // Vehicle filter logic (same as your code)
+            $vehicleType = $request->input('vehicle_type');
             $insuranceDetailQuery = InsuranceDetail::query();
 
             if ($vehicleType == '2') {
@@ -140,35 +160,34 @@ class ClaimController extends Controller
                                     ->where('seating_capacity', '!=', 0);
             }
 
-            // Get filtered claim IDs from insurance details
             if ($vehicleType) {
                 $filteredClaimIds = $insuranceDetailQuery->pluck('claim_id');
                 $query->whereIn('id', $filteredClaimIds);
             }
 
-            // GET FINAL CLAIMS
+            // Added dropdown filter for insurance_company_id
+            // Date: 21-08-2025 added by Tanuja
+            // -------------------------------------------------------
+            if ($request->filled('company_id')) {
+                $query->where('insurance_company_id', $request->company_id);
+            }
+            
+
+            // FINAL CLAIMS
             $claims = $query->orderBy('created_at', 'desc')->get();
 
-            
-
-            // GET INSURANCE DETAILS ONLY FOR THESE CLAIMS
-            // $insuranceDetail = InsuranceDetail::whereIn('claim_id', $claims->pluck('id'))->get();
-
             $insuranceDetail = InsuranceDetail::whereIn('claim_id', $claims->pluck('id'))->get()->keyBy('claim_id');
-
-            // dd($insuranceDetail);
             $states = State::pluck('name', 'id');
-            //  dd($states);
             $usersType = User::where('type', 'manager')->get();
-
-            //FEES BILL DATA
             $feesBillData = ProfessionalFee::whereIn('claim_id', $claims->pluck('id'))->get()->keyBy('claim_id');
-            
-            return view('claim.index', compact('claims','feesBillData','insuranceDetail','states','usersType'));
+            $companies = InsuranceCompany::all(); // adjust model name as per your DB
+
+            return view('claim.index', compact('claims','feesBillData','insuranceDetail','states','usersType','companies'));
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
     }
+
 
     public function create()
     {
@@ -274,7 +293,7 @@ class ClaimController extends Controller
            } catch (\Exception $e) {
            
            }
-            if($claim->status = 'link_shared'){
+            if($claim->status == 'link_shared'){
                 $authKey = env('SMSCOUNTRY_AUTHKEY');
                 $authToken = env('SMSCOUNTRY_AUTHTOKEN');
                 $senderId = env('SMSCOUNTRY_SENDERID');
@@ -639,6 +658,12 @@ class ClaimController extends Controller
 
             //fetch data fees bill
             $feesBillData = ProfessionalFee::where('claim_id', $claim->id)->first();
+
+            $templates = EmailTemplate::all();
+
+            $emailLogs = Email::where('claim_id', $claim->id)
+                        ->orderBy('created_at', 'desc')
+                        ->get();
             
             // Return the view with all the necessary data
             return view('claim.show', compact(
@@ -659,6 +684,8 @@ class ClaimController extends Controller
                 'numberPlate',
                 'vehicleNumber',
                 'feesBillData',
+                'templates',
+                'emailLogs'
             ));
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
@@ -908,7 +935,7 @@ class ClaimController extends Controller
 
             $claim->save();
 
-            if($request->status = 'link_shared'){
+            if($request->status == 'link_shared'){
                 $uploadLink = route('claim.upload', ['id' => Crypt::encrypt($claim->id)]);
                 $uploadLink = $this->shortenUrl7($uploadLink); // Use your own domain here
                 
@@ -1483,7 +1510,7 @@ class ClaimController extends Controller
             $extension       = $file->getClientOriginalExtension();
             $fileNameToStore = md5($filename . time() . rand()) . '.' . $extension;
 
-            // 🔐 Encrypt the file before saving
+            //Encrypt the file before saving
             $encryptedContent = Crypt::encrypt(file_get_contents($file));
             file_put_contents($dir . '/' . $fileNameToStore, $encryptedContent);
 
@@ -1512,6 +1539,7 @@ class ClaimController extends Controller
             'paymentreceipt'      => 'PYR',
             'finalbill'           => 'FBL',
             'video'               => 'VDX',
+            'send_mail'           => 'EML',
         ];
         return $codeMap[$documentType] ?? strtoupper(substr($documentType, 0, 3));
     }

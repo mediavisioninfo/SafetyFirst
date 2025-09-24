@@ -38,6 +38,17 @@ $users = User::where('type', 'Operator')
                 </option>
             </select>
         </form>
+        
+        <?php /*<form method="GET">
+            <select name="company_id" class="form-select" onchange="this.form.submit()">
+                <option value="">-- Select Company --</option>
+                @foreach($companies as $company)
+                    <option value="{{ $company->id }}" {{ request('company_id') == $company->id ? 'selected' : '' }}>
+                        {{ $company->name }}
+                    </option>
+                @endforeach
+            </select>
+        </form>*/ ?>
 
         @if(auth()->user()->type === 'manager' || auth()->user()->type === 'super admin')
         <form id="assignForm" method="POST" action="{{ route('claim.assign') }}">

@@ -29,6 +29,8 @@ class User extends Authenticatable
         'subscription_expire_date',
         'parent_id',
         'is_active',
+        'two_factor_code',
+        'two_factor_expires_at',
     ];
 
 
@@ -40,6 +42,7 @@ class User extends Authenticatable
 
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'two_factor_expires_at' => 'datetime',
     ];
 
     public function verifyTwoFactorAuth($code)

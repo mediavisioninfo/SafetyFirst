@@ -6,36 +6,89 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 
 class TwoFactorController extends Controller
 {
-    public function show()
+    public function selection()
     {
-        if (!session()->has('login.id')) {
-            return redirect()->route('login');
-        }
-        return view('auth.two-factor-login');
+        return view('auth.2fa-selection');
     }
 
-    public function store(Request $request)
+    public function sendCode(Request $request)
     {
         $request->validate([
-            'code' => 'required',
+            'method' => 'required|in:mobile,email',
+            'value' => 'required'
         ]);
 
-        $user = User::find(session('login.id'));
+        $user = Auth::user();
+        $otp = rand(100000, 999999);
 
-        if (!$user) {
-            return redirect()->route('login')->withErrors(['email' => 'Invalid session.']);
+        // Validate that the provided value matches the logged-in user's email or mobile
+        if ($request->method === 'email') {
+            if ($request->value !== $user->email) {
+                return back()->withErrors(['value' => 'This email does not match your account email.']);
+            }
+        } elseif ($request->method === 'mobile') {
+            if ($request->value !== $user->mobile_number) {
+                return back()->withErrors(['value' => 'This mobile number does not match your account mobile number.']);
+            }
         }
 
-        if ($user->verifyTwoFactorAuth($request->code)) {
-            Auth::login($user);
-            session()->forget('login.id');
-            userLoggedHistory();
-            return redirect()->intended(RouteServiceProvider::HOME);
+        // Save OTP in DB
+        $user->update([
+            'two_factor_code' => $otp,
+            'two_factor_expires_at' => now()->addMinutes(10),
+        ]);
+
+        // Send Email
+        if ($request->method === 'email') {
+            Mail::send('auth.email-otp', [
+                'name' => $user->name,
+                'otp' => $otp
+            ], function ($message) use ($request) {
+                $message->to($request->value)
+                    ->subject('Your OTP Code');
+            });
         }
 
-        return back()->withErrors(['code' => 'The provided 2FA code is invalid.']);
+        // Send SMS
+        // if ($request->method === 'mobile') {
+        //     $this->sendSmsCountryOtp($request->value, $otp);
+        // }
+
+        return redirect()->route('2fa.verifyForm')->with('success', 'OTP sent successfully!');
+    }
+
+    public function verifyForm()
+    {
+        return view('auth.2fa-verify');
+    }
+
+    public function verify(Request $request)
+    {
+        $request->validate(['code' => 'required|numeric']);
+
+        $user = Auth::user();
+
+        if ($user->two_factor_code === $request->code && $user->two_factor_expires_at->isFuture()) {
+            $user->update([
+                'two_factor_code' => null,
+                'two_factor_expires_at' => null,
+            ]);
+
+             // Set active company here
+            $companyIds = explode(',', $user->company_id);
+
+            if (!empty($companyIds)) {
+                // Set first company as default
+                session(['active_company_id' => $companyIds[0]]);
+            }
+            
+            return redirect()->intended(\App\Providers\RouteServiceProvider::HOME);
+        }
+
+        return back()->withErrors(['code' => 'Invalid or expired code.']);
     }
 }

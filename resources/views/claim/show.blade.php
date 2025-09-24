@@ -33,23 +33,85 @@
     <div class="right-breadcrumb">
         <ul>
             <a class="btn btn-warning float-end print me-2" href="javascript:void(0);"> {{ __('Print') }}</a>
-            @if ($claim->status === 'approved' || $claim->status === 'rejected')
-                <a class="btn btn-success float-end me-2" href="{{ route('claim.report', $claim->id) }}">
-                    {{ __('Download Report') }}
-                </a>
-            @endif
-            <a class="btn btn-primary float-end me-2" href="{{ route('claim.excel', $claim->id) }}">
-                {{ __('Download Excel') }}
-            </a>
-            <a class="btn btn-danger float-end me-2" href="{{ route('claim.exceltopdf', $claim->id) }}">
-                {{ __('Convert Excel to PDF') }}
-            </a>
             <a class="btn btn-info float-end me-2" href="{{ route('claim.recheck', $claim->id) }}">
                 {{ __('Recheck') }}
             </a>
         </ul>
     </div>
 @endsection
+<!-- Email Modal -->
+<div class="modal fade" id="emailModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <form id="emailForm">
+      @csrf
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Compose Email</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+              <label for="templateSelect">Template</label>
+              <select name="template_id" id="templateSelect" class="form-select">
+                  <option value="">Select Template</option>
+                  @foreach($templates as $template)
+                      <option value="{{ $template->id }}">{{ $template->name }}</option>
+                  @endforeach
+              </select>
+          </div>
+        <div class="mb-3">
+            <label for="cc">CC (optional)</label>
+            <input type="text" name="cc" id="cc" class="form-control" placeholder="Enter CC emails separated by commas">
+        </div>
+
+          <div class="mb-3">
+              <label for="subject">Subject</label>
+              <input type="text" name="subject" id="subject" class="form-control" required>
+          </div>
+
+          <div class="mb-3">
+              <label for="body">Body</label>
+              <textarea name="body" id="body" class="form-control" rows="4"></textarea>
+          </div>
+
+          <div class="form-group mt-2">
+                <label>Upload PDF:</label>
+                <input type="file" id="pdfUpload" accept="application/pdf" class="form-control" />
+          </div>
+
+          <button type="button" class="btn btn-secondary" id="previewBtn">Preview</button>
+
+          <!-- Preview -->
+          <div id="previewBox" class="mt-3 border rounded p-2 d-none">
+              <strong>Subject:</strong> <span id="previewSubject"></span><br>
+              <strong>Body:</strong>
+              <p id="previewBody"></p>
+          </div>
+          <input type="hidden" name="claim_id" id="claim_id" value="{{ $claim->id }}">
+
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Send & Save</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal fade" id="emailModal1" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    Subject: <span id="emailModalSubject"></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="emailMessageContent"></div>
+        </div>
+    </div>
+</div>
+
 <style>
     /* Base styles for tabs */
     .nav-tabs .nav-link {
@@ -259,6 +321,11 @@
                                     <a class="nav-link" id="final-report-tab" data-bs-toggle="tab" href="#final-report"
                                         role="tab" aria-controls="final-report"
                                         aria-selected="false">{{ __('Final Report') }}</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" id="email-logs-tab" data-bs-toggle="tab"
+                                        href="#email-logs" role="tab" aria-controls="email-logs"
+                                        aria-selected="false">{{ __('Email Logs') }}</a>
                                 </li>
                             </ul>
 
@@ -2423,9 +2490,73 @@
                                 {{-- Final Report Tab --}}
                                 <div class="tab-pane fade" id="final-report" role="tabpanel"
                                     aria-labelledby="final-report-tab">
+                                    <div class="right-breadcrumb">
+                                        <ul>
+                                            @if ($claim->status === 'approved' || $claim->status === 'rejected')
+                                                <a class="btn btn-success float-end me-2" href="{{ route('claim.report', $claim->id) }}">
+                                                    {{ __('Download Report') }}
+                                                </a>
+                                            @endif
+                                            @if(auth()->user()->type === 'manager' && $claim->status === 'approved')
+                                                <a class="btn btn-success float-end me-2" data-bs-toggle="modal" data-bs-target="#emailModal">
+                                                    {{ __('Send DO Email') }}
+                                                </a>
+                                            @endif
+                                            <a class="btn btn-primary float-end me-2" href="{{ route('claim.excel', $claim->id) }}">
+                                                {{ __('Download Excel') }}
+                                            </a>
+                                            <a class="btn btn-danger float-end me-2" href="{{ route('claim.exceltopdf', $claim->id) }}">
+                                                {{ __('Convert Excel to PDF') }}
+                                            </a>
+                                        </ul>
+                                    </div>
                                     <h5>{{ __('Final Report') }}</h5>
                                     <iframe src="{{ route('claim.viewReport', ['id' => $claim->id]) }}" width="100%"
                                         height="600px"></iframe>
+                                </div>
+                                <div class="tab-pane fade" id="email-logs" role="tabpanel" aria-labelledby="email-logs-tab">
+                                    <div class="col-md-12 mt-5">
+                                        <div class="table-responsive">
+                                            <table class="table table-striped table-bordered table-hover">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th>{{ __('Sent Time') }}</th>
+                                                        <th>{{ __('Receiver') }}</th>
+                                                        <th>{{ __('Subject') }}</th>
+                                                        <th>{{ __('Status') }}</th>
+                                                        <th>{{ __('Action') }}</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach($emailLogs as $log)
+                                                        <tr>
+                                                            <td>{{ $log->created_at->format('d-m-Y H:i') }}</td>
+                                                            <td>{{ $log->recipients }}</td>
+                                                            <td title="{{ strip_tags($log->subject) }}">
+                                                                {{ $log->subject }}
+                                                            </td>
+                                                            <td>
+                                                                @if($log->status === 'Delivered')
+                                                                    <span class="badge bg-success text-white px-3 py-6 fs-15">Delivered</span>
+                                                                @elseif($log->status === 'Failed')
+                                                                    <span class="badge bg-danger text-white px-3 py-6 fs-15">Failed</span>
+                                                                @else
+                                                                    <span class="badge bg-warning text-white px-3 py-6 fs-15">Pending</span>
+                                                                @endif
+                                                            </td>
+                                                            <td>
+                                                                <button class="btn btn-sm btn-primary view-email1"
+                                                                    data-subject="{{ $log->subject }}"
+                                                                    data-message="{{ htmlentities($log->body) }}">
+                                                                    View
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
                                 </div>
                                 <!-- New Tab Content for Damage Photos -->
                                 <div class="tab-pane fade" id="damage-photos" role="tabpanel"
@@ -2534,41 +2665,42 @@
                                                                 $claimHash = md5($claim->id);
                                                                 $folderCode = getFolderCode('under_repair');
                                                             @endphp
+                                                            @if($underPhotoFiles)
+                                                                @foreach ($underPhotoFiles as $photo)
+                                                                    @php
+                                                                        $filename = $photo['filename'];
+                                                                        $imageUrl = route('secure.image', [$claimHash, 'PHX', $folderCode , $filename]);
+                                                                    @endphp
 
-                                                            @foreach ($underPhotoFiles as $photo)
-                                                                @php
-                                                                    $filename = $photo['filename'];
-                                                                    $imageUrl = route('secure.image', [$claimHash, 'PHX', $folderCode , $filename]);
-                                                                @endphp
-
-                                                                <div class="col-12 col-md-6 col-lg-4 mb-4">
-                                                                    <div class="card">
-                                                                        <a href="{{ $imageUrl }}" target="_blank" class="text-decoration-none">
-                                                                            <img src="{{ $imageUrl }}" class="card-img-top" alt="{{ $filename }}">
-                                                                        </a>
-                                                                        <div class="card-body">
-                                                                            <p class="card-text">
-                                                                                <strong>Capture Time:</strong><br>
-                                                                                {{ \Carbon\Carbon::parse($photo['captureTime'])->format('Y-m-d H:i:s') }}
-                                                                            </p>
-
-                                                                            @if (isset($photo['geotag']) && $photo['geotag'] !== null)
+                                                                    <div class="col-12 col-md-6 col-lg-4 mb-4">
+                                                                        <div class="card">
+                                                                            <a href="{{ $imageUrl }}" target="_blank" class="text-decoration-none">
+                                                                                <img src="{{ $imageUrl }}" class="card-img-top" alt="{{ $filename }}">
+                                                                            </a>
+                                                                            <div class="card-body">
                                                                                 <p class="card-text">
-                                                                                    <strong>Location:</strong><br>
-                                                                                    Lat: {{ $photo['geotag']['latitude'] }}<br>
-                                                                                    Long: {{ $photo['geotag']['longitude'] }}
+                                                                                    <strong>Capture Time:</strong><br>
+                                                                                    {{ \Carbon\Carbon::parse($photo['captureTime'])->format('Y-m-d H:i:s') }}
                                                                                 </p>
-                                                                                <a href="https://www.google.com/maps/search/?api=1&query={{ $photo['geotag']['latitude'] }},{{ $photo['geotag']['longitude'] }}"
-                                                                                target="_blank" class="btn btn-sm btn-primary">
-                                                                                    View on Map
-                                                                                </a>
-                                                                            @else
-                                                                                <p class="card-text text-muted">No location data available</p>
-                                                                            @endif
+
+                                                                                @if (isset($photo['geotag']) && $photo['geotag'] !== null)
+                                                                                    <p class="card-text">
+                                                                                        <strong>Location:</strong><br>
+                                                                                        Lat: {{ $photo['geotag']['latitude'] }}<br>
+                                                                                        Long: {{ $photo['geotag']['longitude'] }}
+                                                                                    </p>
+                                                                                    <a href="https://www.google.com/maps/search/?api=1&query={{ $photo['geotag']['latitude'] }},{{ $photo['geotag']['longitude'] }}"
+                                                                                    target="_blank" class="btn btn-sm btn-primary">
+                                                                                        View on Map
+                                                                                    </a>
+                                                                                @else
+                                                                                    <p class="card-text text-muted">No location data available</p>
+                                                                                @endif
+                                                                            </div>
                                                                         </div>
                                                                     </div>
-                                                                </div>
-                                                            @endforeach
+                                                                @endforeach
+                                                            @endif
 
                                                         </div>
                                                     </div>
@@ -2584,42 +2716,42 @@
                                                                 $claimHash = md5($claim->id);
                                                                 $folderCode = getFolderCode('final');
                                                             @endphp
+                                                            @if($finalPhotoFiles)
+                                                                @foreach ($finalPhotoFiles as $photo)
+                                                                    @php
+                                                                        $filename = $photo['filename'];
+                                                                        $imageUrl = route('secure.image', [$claimHash, 'PHX', $folderCode , $filename]);
+                                                                    @endphp
 
-                                                            @foreach ($finalPhotoFiles as $photo)
-                                                                @php
-                                                                    $filename = $photo['filename'];
-                                                                    $imageUrl = route('secure.image', [$claimHash, 'PHX', $folderCode , $filename]);
-                                                                @endphp
-
-                                                                <div class="col-12 col-md-6 col-lg-4 mb-4">
-                                                                    <div class="card">
-                                                                        <a href="{{ $imageUrl }}" target="_blank" class="text-decoration-none">
-                                                                            <img src="{{ $imageUrl }}" class="card-img-top" alt="{{ $filename }}">
-                                                                        </a>
-                                                                        <div class="card-body">
-                                                                            <p class="card-text">
-                                                                                <strong>Capture Time:</strong><br>
-                                                                                {{ \Carbon\Carbon::parse($photo['captureTime'])->format('Y-m-d H:i:s') }}
-                                                                            </p>
-
-                                                                            @if (isset($photo['geotag']) && $photo['geotag'] !== null)
+                                                                    <div class="col-12 col-md-6 col-lg-4 mb-4">
+                                                                        <div class="card">
+                                                                            <a href="{{ $imageUrl }}" target="_blank" class="text-decoration-none">
+                                                                                <img src="{{ $imageUrl }}" class="card-img-top" alt="{{ $filename }}">
+                                                                            </a>
+                                                                            <div class="card-body">
                                                                                 <p class="card-text">
-                                                                                    <strong>Location:</strong><br>
-                                                                                    Lat: {{ $photo['geotag']['latitude'] }}<br>
-                                                                                    Long: {{ $photo['geotag']['longitude'] }}
+                                                                                    <strong>Capture Time:</strong><br>
+                                                                                    {{ \Carbon\Carbon::parse($photo['captureTime'])->format('Y-m-d H:i:s') }}
                                                                                 </p>
-                                                                                <a href="https://www.google.com/maps/search/?api=1&query={{ $photo['geotag']['latitude'] }},{{ $photo['geotag']['longitude'] }}"
-                                                                                target="_blank" class="btn btn-sm btn-primary">
-                                                                                    View on Map
-                                                                                </a>
-                                                                            @else
-                                                                                <p class="card-text text-muted">No location data available</p>
-                                                                            @endif
+
+                                                                                @if (isset($photo['geotag']) && $photo['geotag'] !== null)
+                                                                                    <p class="card-text">
+                                                                                        <strong>Location:</strong><br>
+                                                                                        Lat: {{ $photo['geotag']['latitude'] }}<br>
+                                                                                        Long: {{ $photo['geotag']['longitude'] }}
+                                                                                    </p>
+                                                                                    <a href="https://www.google.com/maps/search/?api=1&query={{ $photo['geotag']['latitude'] }},{{ $photo['geotag']['longitude'] }}"
+                                                                                    target="_blank" class="btn btn-sm btn-primary">
+                                                                                        View on Map
+                                                                                    </a>
+                                                                                @else
+                                                                                    <p class="card-text text-muted">No location data available</p>
+                                                                                @endif
+                                                                            </div>
                                                                         </div>
                                                                     </div>
-                                                                </div>
-                                                            @endforeach
-
+                                                                @endforeach
+                                                            @endif
                                                         </div>
                                                     </div>
                                                 </div>
@@ -2688,9 +2820,197 @@
 </div>
 </div>
 </div>
+
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 {{-- PDF Library and Script --}}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.view-email1').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+
+            let subject = this.getAttribute('data-subject');
+            let message = this.getAttribute('data-message');
+
+            // Decode HTML entities safely
+            let textarea = document.createElement('textarea');
+            textarea.innerHTML = message;
+            message = textarea.value;
+
+            // Replace "Download PDF" links with embedded preview
+            message = message.replace(
+                /<a href="([^"]+\.pdf)"[^>]*>Download PDF<\/a>/g,
+                function (match, pdfUrl) {
+                    return `
+                        <div class="mb-3">
+                            <strong>PDF Preview:</strong>
+                            <iframe src="${pdfUrl}" width="100%" height="400px" style="border:1px solid #ccc;"></iframe>
+                        </div>`;
+                }
+            );
+
+            // Fill modal fields
+            document.getElementById('emailModalSubject').textContent = subject;
+            document.getElementById('emailMessageContent').innerHTML = message;
+
+            // Show modal
+            let modal = new bootstrap.Modal(document.getElementById('emailModal1'));
+            modal.show();
+        });
+    });
+});
+</script>
+
+<script src="https://cdn.ckeditor.com/ckeditor5/39.0.1/classic/ckeditor.js"></script>
+<script>
+  let ckeditorInstance;
+
+    ClassicEditor
+    .create(document.querySelector('#body'), {
+        toolbar: {
+            items: [
+                'heading', '|',
+                'bold', 'italic', 'underline', '|',
+                'link', 'bulletedList', 'numberedList', '|',
+                'imageUpload', 'undo', 'redo'
+            ]
+        },
+        extraPlugins: [MyCustomUploadAdapterPlugin]
+    })
+    .then(editor => {
+        ckeditorInstance = editor;
+    })
+    .catch(error => {
+        console.error(error);
+    });
+
+    function MyCustomUploadAdapterPlugin(editor) {
+        editor.plugins.get('FileRepository').createUploadAdapter = (loader) => {
+            return new MyUploadAdapter(loader);
+        };
+    }
+
+    class MyUploadAdapter {
+        constructor(loader) {
+            this.loader = loader;
+        }
+
+        upload() {
+            return this.loader.file
+                .then(file => new Promise((resolve, reject) => {
+                    const data = new FormData();
+                    data.append('upload', file);
+                    data.append('claim_id', $('#claim_id').val());
+
+                    fetch("{{ route('ckeditor.upload.document') }}", {
+                        method: "POST",
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: data
+                    })
+                    .then(res => res.json())
+                    .then(result => {
+                        if (result.url.endsWith('.pdf')) {
+                            // Render as link for PDFs
+                            resolve({ default: `<a href="${result.url}" target="_blank">Download PDF</a>` });
+                        } else {
+                            // Render as image
+                            resolve({ default: result.url });
+                        }
+                    })
+                    .catch(err => reject(err));
+                }));
+        }
+
+        abort() {
+            // Optional
+        }
+    }
+
+    // PDF Upload
+    $('#pdfUpload').on('change', function () {
+        const file = this.files[0];
+        const data = new FormData();
+        data.append('upload', file);
+        data.append('claim_id', $('#claim_id').val());
+
+        fetch("{{ route('ckeditor.upload.document') }}", {
+            method: "POST",
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: data
+        })
+        .then(res => res.json())
+        .then(res => {
+            ckeditorInstance.model.change(writer => {
+                const insertPosition = ckeditorInstance.model.document.selection.getFirstPosition();
+                writer.insertText('Download PDF', { linkHref: res.url }, insertPosition);
+            });
+        });
+    });
+
+    // Template change handler
+    $('#templateSelect').on('change', function () {
+        const templateId = $(this).val();
+        const claimId = "{{ $claim->id }}";
+        if (templateId) {
+            $.get(`/template/${templateId}/claim/${claimId}`, function (data) {
+                $('#subject').val(data.subject);
+                ckeditorInstance.setData(data.body);
+            });
+        }
+    });
+
+    // Preview Button
+    $('#previewBtn').on('click', function () {
+        $('#previewSubject').text($('#subject').val());
+
+        let formattedBody = ckeditorInstance.getData();
+
+        formattedBody = formattedBody.replace(
+            /<a href="([^"]+\.pdf)"[^>]*>Download PDF<\/a>/g,
+            function (match, pdfUrl) {
+                return `
+                    <div class="mb-3">
+                        <strong>PDF Preview:</strong>
+                        <iframe src="${pdfUrl}" width="100%" height="400px" style="border:1px solid #ccc;"></iframe>
+                    </div>`;
+            }
+        );
+
+        $('#previewBody').html(formattedBody);
+        $('#previewBox').removeClass('d-none');
+    });
+
+    // Form Submit
+    $('#emailForm').on('submit', function(e) {
+        e.preventDefault();
+        const content = ckeditorInstance.getData().trim();
+        if (!content) {
+            alert('Email body is required.');
+            return;
+        }
+
+        $('#body').val(content);
+        let formData = $(this).serialize() + '&claim_id={{ $claim->id }}';
+        
+        $.ajax({
+            url: "{{ route('emails.store') }}",
+            method: "POST",
+            data: formData,
+            success: function(response) {
+                alert(response.message);
+                $('#emailModal').modal('hide');
+                $('#emailForm')[0].reset();
+                $('#previewBox').addClass('d-none');
+                ckeditorInstance.setData('');
+            }
+        });
+    });
+</script>
+
 <script>
 function downloadSectionAsPDF(button) {
   const targetId = button.getAttribute('data-target');

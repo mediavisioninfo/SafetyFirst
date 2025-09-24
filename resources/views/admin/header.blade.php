@@ -39,20 +39,46 @@
                 @endif
                 <li class="nav-profile">
                     <div class="media">
-                        <div class="user-icon"><img class="img-fluid rounded-50"
-                                                    src="{{(!empty($users->profile)? $profile.'/'.$users->profile : $profile.'/avatar.png')}}"
-                                                    alt="logo"></div>
+                        <div class="user-icon">
+                            {{-- Show active company logo --}}
+                            @php
+                                $activeCompanyId = session('active_company_id');
+                                $activeCompany = \App\Models\InsuranceCompany::find($activeCompanyId);
+                            @endphp
+                            <img class="img-fluid rounded-50"
+                                src="{{ asset('storage/logo/' . $activeCompany->logo) }}"
+                                alt="{{ $activeCompany->name }}">
+                        </div>
                         <div class="media-body">
-                            <h6>{{\Auth::user()->name}}</h6><span class="text-light">{{\Auth::user()->type}}</span>
+                            <h6>{{ \Auth::user()->name }} ({{\Auth::user()->type}})</h6>
+                            <span class="text-light">{{ $activeCompany->name }}</span>
                         </div>
                     </div>
+
+                    {{-- Switch dropdown --}}
                     <div class="hover-dropdown navprofile-drop">
                         <ul>
+                            @php
+                                $companyIds = explode(',', Auth::user()->company_id);
+                                $companies = \App\Models\InsuranceCompany::whereIn('id', $companyIds)->get();
+                            @endphp
+                            @foreach($companies as $company)
+                                <li>
+                                    <form method="POST" action="{{ route('switch.company', $company->id) }}">
+                                        @csrf
+                                        <button type="submit" class="dropdown-item d-flex align-items-center">
+                                            <img src="{{ asset('storage/logo/' . $company->logo) }}" width="20" class="me-2">
+                                            {{ $company->name }}
+                                        </button>
+                                    </form>
+                                </li>
+                            @endforeach
+
                             <li><a href="{{route('setting.account')}}"><i class="ti-user"></i>{{__('Profile')}}</a></li>
                             <li>
                                 <a href="{{ route('logout') }}"
-                                   onclick="event.preventDefault(); document.getElementById('frm-logout').submit();"><i
-                                        class="fa fa-sign-out"></i>{{__('Logout')}}</a>
+                                onclick="event.preventDefault(); document.getElementById('frm-logout').submit();">
+                                <i class="fa fa-sign-out"></i>{{__('Logout')}}</a>
                                 <form id="frm-logout" action="{{ route('logout') }}" method="POST" class="d-none">
                                     {{ csrf_field() }}
                                 </form>

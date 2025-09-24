@@ -1,0 +1,25 @@
+version: 0.0
+os: linux
+
+# The 'files' section specifies what to copy and where.
+files:
+  - source: /
+    # 'source: /' means copy everything from the deployment package.
+    destination: /var/www/html/
+    # 'destination' is the web server's root directory on your EC2 instance.
+
+# The 'hooks' section defines the scripts to run during different deployment lifecycle events.
+hooks:
+  BeforeInstall:
+    # This runs before the new application version is copied over.
+    # We use it to clean up the previous version.
+    - location: scripts/before_install.sh
+      timeout: 300
+      runas: root
+
+  AfterInstall:
+    # This runs after the new application files have been copied.
+    # We use it to install dependencies, run migrations, set permissions, and cache configs.
+    - location: scripts/after_install.sh
+      timeout: 300
+      runas: root

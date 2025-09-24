@@ -2,16 +2,38 @@
     $admin_logo=getSettingsValByName('company_logo');
     $ids     = parentId();
     $authUser=\App\Models\User::find($ids);
- $subscription = \App\Models\Subscription::find($authUser->subscription);
- $routeName=\Request::route()->getName();
+    $subscription = \App\Models\Subscription::find($authUser->subscription);
+    $routeName=\Request::route()->getName();
+    $user = \Auth::user();
+
+    // Handle single or multiple company_id
+    $companyIds = is_numeric($user->company_id) 
+        ? [$user->company_id] 
+        : explode(',', $user->company_id);
+
+    // Get active company id from session, fallback to user's first company
+    $activeCompanyId = session('active_company_id') ?? $companyIds[0];
+
+    // Company logos map
+    $logoMap = [
+        1 => 'new_india_insurance.png',
+        2 => 'national_insurance.jpeg',
+        3 => 'united_india_insurance.png',
+        4 => 'oriental_insurance.jpeg',
+    ];
+
 @endphp
 <aside class="codex-sidebar sidebar-{{$settings['sidebar_mode']}}">
     <div class="logo-gridwrap">
-        <a class="codexbrand-logo" href="{{route('home')}}">
-            <img class="img-fluid"
-                 src="{{asset(Storage::url('upload/logo/')).'/'.(isset($admin_logo) && !empty($admin_logo)?$admin_logo:'logo.png')}}"
-                 alt="theeme-logo">
-        </a>
+        <div class="d-flex gap-3 align-items-center">
+            @if(isset($logoMap[$activeCompanyId]))
+                <a class="codexbrand-logo" href="{{ route('home') }}">
+                    <img class="img-fluid"
+                        src="{{ asset('storage/logo/' . $logoMap[$activeCompanyId]) }}"
+                        alt="Company Logo">
+                </a>
+            @endif
+        </div>
         <a class="codex-darklogo" href="{{route('home')}}">
             <img class="img-fluid"
                  src="{{asset(Storage::url('upload/logo/')).'/'.(isset($admin_logo) && !empty($admin_logo)?$admin_logo:'logo.png')}}"
