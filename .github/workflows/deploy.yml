@@ -21,11 +21,12 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.SF_LIGHTSAIL_HOST }} >> ~/.ssh/known_hosts
 
-      # Step 2: Deploy code (git pull from repo)
+      # Step 2: Deploy code to Lightsail (with composer fallback)
       - name: Deploy code to Lightsail
         run: |
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa bitnami@${{ secrets.SF_LIGHTSAIL_HOST }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa bitnami@${{ secrets.SF_LIGHTSAIL_HOST }} <<'EOF'
             cd /home/bitnami/htdocs
+
             if [ ! -d .git ]; then
               echo "No git repo found. Cloning repository..."
               git clone https://github.com/${{ github.repository }} .
@@ -34,25 +35,27 @@ jobs:
               git reset --hard
               git pull origin main
             fi
-               echo "Running composer install..."
-            composer install --no-dev --optimize-autoloader || (
+
+            echo "Running composer install..."
+            composer install --no-dev --optimize-autoloader || {
               echo "Composer install failed. Running composer update instead..."
               composer update --no-dev --optimize-autoloader
+            }
           EOF
 
       # Step 3: Upload .env file
-      - name: Upload .env to Lightsail
+      - name: Upload .env.example to Lightsail
         run: |
           cp .env.example .env
           scp -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa .env bitnami@${{ secrets.SF_LIGHTSAIL_HOST }}:/home/bitnami/htdocs/.env.example
-          rm .env.example  # remove after upload for security
+          rm .env.example
 
-      # Step 4: Run Laravel setup and restart services
+      # Step 4: Run Laravel setup commands
       - name: Run Laravel setup commands
         run: |
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa bitnami@${{ secrets.SF_LIGHTSAIL_HOST }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa bitnami@${{ secrets.SF_LIGHTSAIL_HOST }} <<'EOF'
             cd /home/bitnami/htdocs
-            php artisan key:generate
+            php artisan key:generate --force
             php artisan migrate --force
             php artisan config:cache
             php artisan route:cache
