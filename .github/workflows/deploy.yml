@@ -34,7 +34,10 @@ jobs:
               git reset --hard
               git pull origin main
             fi
-            composer install --no-dev --optimize-autoloader
+               echo "Running composer install..."
+            composer install --no-dev --optimize-autoloader || (
+              echo "Composer install failed. Running composer update instead..."
+              composer update --no-dev --optimize-autoloader
           EOF
 
       # Step 3: Upload .env file
