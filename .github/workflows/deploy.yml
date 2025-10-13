@@ -16,7 +16,7 @@ jobs:
       - name: Set up SSH key
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          echo "${{ secrets.SF_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.SF_LIGHTSAIL_HOST }} >> ~/.ssh/known_hosts
 
@@ -37,7 +37,7 @@ jobs:
 
       - name: Run Laravel setup commands
         run: |
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa bitnami@${{ secrets.LIGHTSAIL_HOST }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa bitnami@${{ secrets.SF_LIGHTSAIL_HOST }} << 'EOF'
             cd /opt/bitnami/htdocs
             php artisan migrate --force
             php artisan config:cache
