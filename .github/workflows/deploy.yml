@@ -23,7 +23,7 @@ jobs:
       - name: Deploy code to Lightsail
         run: |
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa bitnami@${{ secrets.SF_LIGHTSAIL_HOST }} << 'EOF'
-            cd /opt/bitnami/htdocs   # adjust this path to your Laravel app folder
+            cd /home/bitnami/htdocs   # adjust this path to your Laravel app folder
             git reset --hard
             git pull origin main
             composer install --no-dev --optimize-autoloader
