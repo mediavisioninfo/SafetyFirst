@@ -13,6 +13,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      # Step 1: Set up SSH key
       - name: Set up SSH key
         run: |
           mkdir -p ~/.ssh
@@ -20,25 +21,35 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.SF_LIGHTSAIL_HOST }} >> ~/.ssh/known_hosts
 
+      # Step 2: Deploy code (git pull from repo)
       - name: Deploy code to Lightsail
         run: |
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa bitnami@${{ secrets.SF_LIGHTSAIL_HOST }} << 'EOF'
-            cd /home/bitnami/htdocs   # adjust this path to your Laravel app folder
-            git reset --hard
-            git pull origin main
+            cd /home/bitnami/htdocs
+            if [ ! -d .git ]; then
+              echo "No git repo found. Cloning repository..."
+              git clone https://github.com/${{ github.repository }} .
+            else
+              echo "Updating existing repository..."
+              git reset --hard
+              git pull origin main
+            fi
             composer install --no-dev --optimize-autoloader
           EOF
 
+      # Step 3: Upload .env file
       - name: Upload .env to Lightsail
         run: |
-          echo "${{ secrets.LARAVEL_ENV_FILE }}" > .env.example
-          scp -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa .env bitnami@${{ secrets.SF_LIGHTSAIL_HOST }}:/opt/bitnami/htdocs/.env.example
+          cp .env.example .env
+          scp -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa .env bitnami@${{ secrets.SF_LIGHTSAIL_HOST }}:/home/bitnami/htdocs/.env.example
           rm .env.example  # remove after upload for security
 
+      # Step 4: Run Laravel setup and restart services
       - name: Run Laravel setup commands
         run: |
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa bitnami@${{ secrets.SF_LIGHTSAIL_HOST }} << 'EOF'
-            cd /opt/bitnami/htdocs
+            cd /home/bitnami/htdocs
+            php artisan key:generate
             php artisan migrate --force
             php artisan config:cache
             php artisan route:cache
