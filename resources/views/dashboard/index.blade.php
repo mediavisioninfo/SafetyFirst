@@ -143,7 +143,7 @@ $settings=settings();
     <div class="col-xxl-3 col-sm-6 cdx-xxl-50">
         <div class="card sale-revenue" style="background-color: #ecf0f1; color: #34495e; border: 1px solid #ddd; border-radius: 8px; transition: all 0.3s ease; cursor: pointer;" onmouseover="this.style.backgroundColor='#95a5a6'; this.style.color='#ffffff'; this.style.boxShadow='0 8px 16px rgba(0,0,0,0.2)'; this.style.transform='scale(1.05)';" onmouseout="this.style.backgroundColor='#ecf0f1'; this.style.color='#34495e'; this.style.boxShadow='none'; this.style.transform='scale(1)';">
             <div class="card-header">
-                <h4>{{__('Claim Intimated')}}</h4>
+                <h4>{{__('Claim live as on date')}}</h4>
             </div>
             <div class="card-body progressCounter">
                 <h2><span class="count">{{$result['Claim Intimated']}}</span></h2>
@@ -205,17 +205,22 @@ $settings=settings();
             </div>
         </div>
     </div>
-</div>
-<div class="row">
-    <div class="col-xxl-12 cdx-xxl-50">
-        <div class="card overall-revenuetbl" style="background-color: #f8f9fa; color: #34495e; border: 1px solid #ddd; border-radius: 8px; transition: all 0.3s ease; cursor: pointer;" onmouseover="this.style.backgroundColor='#e3eaf3'; this.style.boxShadow='0 8px 16px rgba(0,0,0,0.2)'; this.style.transform='scale(1.02)';" onmouseout="this.style.backgroundColor='#f8f9fa'; this.style.boxShadow='none'; this.style.transform='scale(1)';">
-            <div class="card-header">
-                <h4>{{__('Payment Overview')}}</h4>
-            </div>
-            <div class="card-body">
-                <div id="paymentOverview"></div>
-            </div>
+    <div class="col-xxl-3 col-sm-6 cdx-xxl-50">
+    <div class="card sale-revenue" 
+         style="background-color: #f0f8ff; color: #2c3e50; border: 1px solid #ddd; border-radius: 8px; transition: all 0.3s ease; cursor: pointer;" 
+         onmouseover="this.style.backgroundColor='#3498db'; this.style.color='#ffffff'; this.style.boxShadow='0 8px 16px rgba(0,0,0,0.2)'; this.style.transform='scale(1.05)';" 
+         onmouseout="this.style.backgroundColor='#f0f8ff'; this.style.color='#2c3e50'; this.style.boxShadow='none'; this.style.transform='scale(1)';">
+        <div class="card-header">
+            <h4>{{__('Total Claim')}}</h4>
+        </div>
+        <div class="card-body progressCounter">
+            <h2>
+                <span class="count">
+                    {{$result['Claim Intimated'] + $result['Documents Pending'] + $result['Documents Submitted'] + $result['Under Review'] + $result['Rejected'] + $result['Approved']}}
+                </span>
+            </h2>
         </div>
     </div>
+</div>
 </div>
 @endsection

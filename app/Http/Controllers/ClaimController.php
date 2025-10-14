@@ -331,10 +331,16 @@ class ClaimController extends Controller
                         "Is_Unicode" => false
                     ];
 
+                    // $response = Http::withHeaders([
+                    //     'Authorization' => "Basic $auth",
+                    //     'Content-Type' => 'application/json'
+                    // ])->post("https://restapi.smscountry.com/v0.1/Accounts/$authKey/SMSes", $data);
+
                     $response = Http::withHeaders([
                         'Authorization' => "Basic $auth",
                         'Content-Type' => 'application/json'
-                    ])->post("https://restapi.smscountry.com/v0.1/Accounts/$authKey/SMSes", $data);
+                    ])->timeout(30) // seconds, default 10
+                    ->post("https://restapi.smscountry.com/v0.1/Accounts/$authKey/SMSes", $data);
 
                     $responseData = $response->json();
 
