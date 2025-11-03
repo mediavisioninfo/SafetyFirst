@@ -251,11 +251,19 @@ $users = User::where('type', 'Operator')
         });
     }
     function copyLink(link) {
-        navigator.clipboard.writeText(link).then(function() {
-            alert('Link copied to clipboard!');
-        }, function(err) {
-            console.error('Could not copy link: ', err);
-        });
+      const tempInput = document.createElement("input");
+      tempInput.value = link;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      tempInput.setSelectionRange(0, 99999); // mobile-safe
+      try {
+        document.execCommand("copy");
+        alert("Link copied to clipboard!");
+      } catch (err) {
+        console.error("Copy failed:", err);
+        alert("Unable to copy link. Please copy manually.");
+      }
+      document.body.removeChild(tempInput);
     }
 </script>
 
