@@ -1,0 +1,39 @@
+name: Deploy Laravel App to Lightsail
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # allows manual deploy trigger from GitHub UI
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SF_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SF_LIGHTSAIL_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to Lightsail
+        run: |
+          ssh -i ~/.ssh/id_rsa bitnami@${{ secrets.SF_LIGHTSAIL_HOST }} << 'EOF'
+            cd /home/bitnami/htdocs
+            echo "📦 Pulling latest code..."
+            git fetch origin main
+            git reset --hard origin/main
+            echo "⚙️ Running composer install..."
+            composer install --no-dev --optimize-autoloader
+            echo "🧱 Running Laravel setup..."
+            php artisan migrate --force
+            php artisan config:cache
+            php artisan route:cache
+            sudo /opt/bitnami/ctlscript.sh restart apache php-fpm
+            echo "✅ Deployment complete!"
+          EOF
