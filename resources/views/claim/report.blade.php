@@ -445,6 +445,10 @@
                     <span class="detail-label">(v) License Type:</span>
                     <span>{{ $latestDlDetails->license_type ?? 'Not Available' }}</span>
                 </div>
+                <div class="detail-item">
+                    <span class="detail-label">(vi) Date of Birth:</span>
+                    <span>{{ $latestDlDetails->dob ?? 'Not Available' }}</span>
+                </div>
             </div>
         </div>
 
@@ -462,7 +466,7 @@
                 </div>
                 <div class="detail-item">
                     <span class="detail-label">(iii) Place of Survey:</span>
-                    <span> </span>
+                    <span>{{ $claim->place_of_survey }} </span>
                 </div>
             </div>
         </div>

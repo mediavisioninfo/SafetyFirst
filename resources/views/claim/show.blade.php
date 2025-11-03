@@ -1295,6 +1295,7 @@
                                                         $firFile = $claim->fir_file;
                                                         $finalBillFiles = $claim->final_bill_files;
                                                         $paymentRecepitFiles = json_decode($claim->payment_receipt_files, true) ?? [];
+                                                        $bankDetailsFiles = json_decode($claim->bank_details_files, true) ?? [];
                                                     @endphp
                                                     {{-- number Plate Files --}}
                                                     <tr>
@@ -1309,10 +1310,18 @@
                                                         </td>
                                                         <td>
                                                             @if (!empty($numberPlateFiles))
+                                                                @php
+                                                                    $claimHash = md5($claim->id);
+                                                                    $folderCode = getFolderCode('number_plate');
+                                                                @endphp
                                                                 @foreach ($numberPlateFiles as $number_plate)
+                                                                    @php
+                                                                        $filename = $number_plate['filename'];
+                                                                        $imageUrl = route('secure.image', [$claimHash, $folderCode, 'null', $filename]);
+                                                                    @endphp
                                                                     <div class="d-flex align-items-center mb-2">
                                                                         <!-- View Icon -->
-                                                                        <a href="{{ asset("storage/upload/document/claim-{$claim->id}/number_plate/" . $number_plate['filename']) }}"
+                                                                        <a href="{{ $imageUrl }}"
                                                                             target="_blank" class="text-warning"
                                                                             data-bs-toggle="tooltip"
                                                                             data-bs-original-title="View">
@@ -1374,10 +1383,18 @@
                                                         </td>
                                                         <td>
                                                             @if (!empty($aadhaarFiles))
+                                                                @php
+                                                                    $claimHash = md5($claim->id);
+                                                                    $folderCode = getFolderCode('aadhaar');
+                                                                @endphp
                                                                 @foreach ($aadhaarFiles as $aadhaar)
+                                                                    @php
+                                                                        $filename = $aadhaar;
+                                                                        $imageUrl = route('secure.image', [$claimHash, $folderCode, 'null', $filename]);
+                                                                    @endphp
                                                                     <div class="d-flex align-items-center mb-2">
                                                                         <!-- View Icon -->
-                                                                        <a href="{{ asset("storage/upload/document/claim-{$claim->id}/aadhaar/" . $aadhaar) }}"
+                                                                        <a href="{{ $imageUrl }}"
                                                                             target="_blank" class="text-warning"
                                                                             data-bs-toggle="tooltip"
                                                                             data-bs-original-title="View">
@@ -1438,10 +1455,18 @@
                                                         </td>
                                                         <td>
                                                             @if (!empty($panCardFiles))
+                                                                @php
+                                                                    $claimHash = md5($claim->id);
+                                                                    $folderCode = getFolderCode('pan_card');
+                                                                @endphp
                                                                 @foreach ($panCardFiles as $pan_card)
+                                                                    @php
+                                                                        $filename = $pan_card;
+                                                                        $imageUrl = route('secure.image', [$claimHash, $folderCode, 'null', $filename]);
+                                                                    @endphp
                                                                     <div class="d-flex align-items-center mb-2">
                                                                         <!-- View Icon -->
-                                                                        <a href="{{ asset("storage/upload/document/claim-{$claim->id}/pan_card/" . $pan_card) }}"
+                                                                        <a href="{{ $imageUrl }}"
                                                                             target="_blank" class="text-warning"
                                                                             data-bs-toggle="tooltip"
                                                                             data-bs-original-title="View">
@@ -1504,7 +1529,15 @@
                                                         </td>
                                                         <td>
                                                             @if (!empty($rcBookFiles))
+                                                                @php
+                                                                    $claimHash = md5($claim->id);
+                                                                    $folderCode = getFolderCode('rcbook');
+                                                                @endphp
                                                                 @foreach ($rcBookFiles as $rcBook)
+                                                                    @php
+                                                                        $filename = $rcBook;
+                                                                        $imageUrl = route('secure.image', [$claimHash, $folderCode, 'null', $filename]);
+                                                                    @endphp
                                                                     <div class="d-flex align-items-center mb-2">
                                                                         <!-- View Icon -->
                                                                         <a href="{{ asset("storage/upload/document/claim-{$claim->id}/rcbook/" . $rcBook) }}"
@@ -1570,10 +1603,18 @@
                                                         </td>
                                                         <td>
                                                             @if (!empty($taxReceiptFiles))
+                                                                @php
+                                                                    $claimHash = md5($claim->id);
+                                                                    $folderCode = getFolderCode('tax_receipt');
+                                                                @endphp
                                                                 @foreach ($taxReceiptFiles as $taxReceipt)
+                                                                    @php
+                                                                        $filename = $taxReceipt;
+                                                                        $imageUrl = route('secure.image', [$claimHash, $folderCode, 'null', $filename]);
+                                                                    @endphp
                                                                     <div class="d-flex align-items-center mb-2">
                                                                         <!-- View Icon -->
-                                                                        <a href="{{ asset("storage/upload/document/claim-{$claim->id}/tax_receipt/" . $taxReceipt) }}"
+                                                                        <a href="{{ $imageUrl }}"
                                                                             target="_blank" class="text-warning"
                                                                             data-bs-toggle="tooltip"
                                                                             data-bs-original-title="View">
@@ -1634,10 +1675,18 @@
                                                         </td>
                                                         <td>
                                                             @if (!empty($salesInvoiceFiles))
+                                                                @php
+                                                                    $claimHash = md5($claim->id);
+                                                                    $folderCode = getFolderCode('sales_invoice');
+                                                                @endphp
                                                                 @foreach ($salesInvoiceFiles as $salesInvoice)
+                                                                @php
+                                                                    $filename = $salesInvoice;
+                                                                    $imageUrl = route('secure.image', [$claimHash, $folderCode, 'null', $filename]);
+                                                                @endphp
                                                                     <div class="d-flex align-items-center mb-2">
                                                                         <!-- View Icon -->
-                                                                        <a href="{{ asset("storage/upload/document/claim-{$claim->id}/sales_invoice/" . $salesInvoice) }}"
+                                                                        <a href="{{ $imageUrl }}"
                                                                             target="_blank" class="text-warning"
                                                                             data-bs-toggle="tooltip"
                                                                             data-bs-original-title="View">
@@ -1700,10 +1749,19 @@
                                                         </td>
                                                         <td>
                                                             @if (!empty($dlFiles))
+                                                                @php
+                                                                    $claimHash = md5($claim->id);
+                                                                    $folderCode = getFolderCode('dl');
+                                                                @endphp
+
                                                                 @foreach ($dlFiles as $dl)
+                                                                     @php
+                                                                        $filename = $dl;
+                                                                        $imageUrl = route('secure.image', [$claimHash, $folderCode, 'null', $filename]);
+                                                                    @endphp
                                                                     <div class="d-flex align-items-center mb-2">
                                                                         <!-- View Icon -->
-                                                                        <a href="{{ asset("storage/upload/document/claim-{$claim->id}/dl/" . $dl) }}"
+                                                                        <a href="{{ $imageUrl }}"
                                                                             target="_blank" class="text-warning"
                                                                             data-bs-toggle="tooltip"
                                                                             data-bs-original-title="View">
@@ -1765,8 +1823,15 @@
                                                         <td>
                                                             @if (!empty($insuranceFile))
                                                                 <div class="d-flex align-items-center mb-2">
+                                                                    @php
+                                                                        $claimId = $claim->id;
+                                                                        $claimHash = md5($claimId);
+                                                                        $folderCode = getFolderCode('insurance');
+                                                                        $filename = $insuranceFile; 
+                                                                        $imageUrl = route('secure.image', [$claimHash, $folderCode, 'null', $filename]);
+                                                                    @endphp
                                                                     <!-- View Icon -->
-                                                                    <a href="{{ asset("storage/upload/document/claim-{$claim->id}/insurance/" . $insuranceFile) }}"
+                                                                    <a href="{{ $imageUrl }}"
                                                                         target="_blank" class="text-warning"
                                                                         data-bs-toggle="tooltip"
                                                                         data-bs-original-title="View">
@@ -1818,8 +1883,15 @@
                                                         <td>
                                                             @if (!empty($claimForm))
                                                                 <div class="d-flex align-items-center mb-2">
+                                                                    @php
+                                                                        $claimId = $claim->id;
+                                                                        $claimHash = md5($claimId);
+                                                                        $folderCode = getFolderCode('claimform');
+                                                                        $filename = $claimForm; 
+                                                                        $imageUrl = route('secure.image', [$claimHash, $folderCode, 'null', $filename]);
+                                                                    @endphp
                                                                     <!-- View Icon -->
-                                                                    <a href="{{ asset("storage/upload/document/claim-{$claim->id}/claimform/" . $claimForm) }}"
+                                                                    <a href="{{ $imageUrl }}"
                                                                         target="_blank" class="text-warning"
                                                                         data-bs-toggle="tooltip"
                                                                         data-bs-original-title="View">
@@ -1871,8 +1943,15 @@
                                                         <td>
                                                             @if (!empty($claimIntimation))
                                                                 <div class="d-flex align-items-center mb-2">
+                                                                    @php
+                                                                        $claimId = $claim->id;
+                                                                        $claimHash = md5($claimId);
+                                                                        $folderCode = getFolderCode('claimintimation');
+                                                                        $filename = $claimIntimation; 
+                                                                        $imageUrl = route('secure.image', [$claimHash, $folderCode, 'null', $filename]);
+                                                                    @endphp
                                                                     <!-- View Icon -->
-                                                                    <a href="{{ asset("storage/upload/document/claim-{$claim->id}/claimintimation/" . $claimIntimation) }}"
+                                                                    <a href="{{ $imageUrl }}"
                                                                         target="_blank" class="text-warning"
                                                                         data-bs-toggle="tooltip"
                                                                         data-bs-original-title="View">
@@ -1925,7 +2004,14 @@
                                                             @if (!empty($satisfactionVoucher))
                                                                 <div class="d-flex align-items-center mb-2">
                                                                     <!-- View Icon -->
-                                                                    <a href="{{ asset("storage/upload/document/claim-{$claim->id}/satisfactionvoucher/" . $satisfactionVoucher) }}"
+                                                                    @php
+                                                                        $claimId = $claim->id;
+                                                                        $claimHash = md5($claimId);
+                                                                        $folderCode = getFolderCode('satisfactionvoucher');
+                                                                        $filename = $satisfactionVoucher; 
+                                                                        $imageUrl = route('secure.image', [$claimHash, $folderCode, 'null', $filename]);
+                                                                    @endphp
+                                                                    <a href="{{ $imageUrl }}"
                                                                         target="_blank" class="text-warning"
                                                                         data-bs-toggle="tooltip"
                                                                         data-bs-original-title="View">
@@ -1979,8 +2065,15 @@
                                                         <td>
                                                             @if (!empty($firFile))
                                                                 <div class="d-flex align-items-center mb-2">
+                                                                    @php
+                                                                        $claimId = $claim->id;
+                                                                        $claimHash = md5($claimId);
+                                                                        $folderCode = getFolderCode('fir');
+                                                                        $filename = $firFile; 
+                                                                        $imageUrl = route('secure.image', [$claimHash, $folderCode, 'null', $filename]);
+                                                                    @endphp
                                                                     <!-- View Icon -->
-                                                                    <a href="{{ asset("storage/upload/document/claim-{$claim->id}/fir/" . $firFile) }}"
+                                                                    <a href="{{ $imageUrl }}"
                                                                         target="_blank" class="text-warning"
                                                                         data-bs-toggle="tooltip"
                                                                         data-bs-original-title="View">
@@ -2033,15 +2126,27 @@
                                                         </td>
                                                         <td>
                                                             @if (!empty($paymentRecepitFiles))
+                                                                @php
+                                                                    $claimHash = md5($claim->id);
+                                                                    $folderCode = getFolderCode('paymentreceipt');
+                                                                @endphp
+
                                                                 @foreach ($paymentRecepitFiles as $paymentreceipt)
+                                                                    @php
+                                                                        $filename = $paymentreceipt;
+                                                                        $imageUrl = route('secure.image', [$claimHash, $folderCode, 'null', $filename]);
+                                                                    @endphp
+
                                                                     <div class="d-flex align-items-center mb-2">
                                                                         <!-- View Icon -->
-                                                                        <a href="{{ asset("storage/upload/document/claim-{$claim->id}/paymentreceipt/" . $paymentreceipt) }}"
-                                                                            target="_blank" class="text-warning"
+                                                                        <a href="{{ $imageUrl }}"
+                                                                            target="_blank"
+                                                                            class="text-warning"
                                                                             data-bs-toggle="tooltip"
                                                                             data-bs-original-title="View">
                                                                             <i data-feather="eye"></i>
                                                                         </a>
+
                                                                         <!-- Update Icon -->
                                                                         <input type="file"
                                                                             class="form-control form-control-sm d-none"
@@ -2057,6 +2162,7 @@
                                                                             data-bs-original-title="Edit">
                                                                             <i data-feather="edit"></i>
                                                                         </a>
+
                                                                         <!-- Delete Icon -->
                                                                         <a href="javascript:void(0);"
                                                                             class="text-danger ms-2"
@@ -2068,7 +2174,8 @@
                                                                     </div>
                                                                 @endforeach
                                                                 <!-- Add More Documents -->
-                                                                <a href="javascript:void(0);" class="text-primary mt-2"
+                                                                <a href="javascript:void(0);"
+                                                                    class="text-primary mt-2"
                                                                     onclick="addMoreDocuments('paymentreceipt')"
                                                                     data-bs-toggle="tooltip"
                                                                     data-bs-original-title="Add More">
@@ -2076,7 +2183,8 @@
                                                                 </a>
                                                             @else
                                                                 <!-- Upload Icon -->
-                                                                <a href="javascript:void(0);" class="text-primary"
+                                                                <a href="javascript:void(0);"
+                                                                    class="text-primary"
                                                                     onclick="addMoreDocuments('paymentreceipt')"
                                                                     data-bs-toggle="tooltip"
                                                                     data-bs-original-title="Upload">
@@ -2085,6 +2193,7 @@
                                                             @endif
                                                         </td>
                                                     </tr>
+                                                    {{-- Final Bill --}}
                                                     <tr>
                                                         <td>Final Bill</td>
                                                         <td>
@@ -2098,7 +2207,14 @@
                                                             @if (!empty($finalBillFiles))
                                                                 <div class="d-flex align-items-center mb-2">
                                                                     <!-- View Icon -->
-                                                                    <a href="{{ asset("storage/upload/document/claim-{$claim->id}/finalbill/" . $finalBillFiles) }}"
+                                                                    @php
+                                                                        $claimId = $claim->id;
+                                                                        $claimHash = md5($claimId);
+                                                                        $folderCode = getFolderCode('finalbill');
+                                                                        $filename = $finalBillFiles; // ✅ Added semicolon here
+                                                                        $imageUrl = route('secure.image', [$claimHash, $folderCode, 'null', $filename]);
+                                                                    @endphp
+                                                                    <a href="{{ $imageUrl }}"
                                                                         target="_blank" class="text-warning"
                                                                         data-bs-toggle="tooltip"
                                                                         data-bs-original-title="View">
@@ -2131,6 +2247,86 @@
                                                                 <!-- Upload Icon -->
                                                                 <a href="javascript:void(0);" class="text-primary"
                                                                     onclick="addMoreDocuments('finalbill')"
+                                                                    data-bs-toggle="tooltip"
+                                                                    data-bs-original-title="Upload">
+                                                                    <i data-feather="upload"></i>
+                                                                </a>
+                                                            @endif
+                                                        </td>
+                                                    </tr>
+                                                    {{-- Bank Details Files --}}
+                                                    <tr>
+                                                        <td>Bank Details</td>
+                                                        <td>
+                                                            @if (!empty($bankDetailsFiles))
+                                                                <span style="color: green;">&#x2714;</span> Available
+                                                                ({{ count($bankDetailsFiles) }} file(s))
+                                                            @else
+                                                                <span style="color: red;">&#x2716;</span> Pending Document
+                                                            @endif
+                                                        </td>
+                                                        <td>
+                                                            @if (!empty($bankDetailsFiles))
+                                                                @php
+                                                                    $claimHash = md5($claim->id);
+                                                                    $folderCode = getFolderCode('bankdetails');
+                                                                @endphp
+
+                                                                @foreach ($bankDetailsFiles as $bankdetails)
+                                                                    @php
+                                                                        $filename = $bankdetails;
+                                                                        $imageUrl = route('secure.image', [$claimHash, $folderCode, 'null', $filename]);
+                                                                    @endphp
+
+                                                                    <div class="d-flex align-items-center mb-2">
+                                                                        <!-- View Icon -->
+                                                                        <a href="{{ $imageUrl }}"
+                                                                            target="_blank"
+                                                                            class="text-warning"
+                                                                            data-bs-toggle="tooltip"
+                                                                            data-bs-original-title="View">
+                                                                            <i data-feather="eye"></i>
+                                                                        </a>
+
+                                                                        <!-- Update Icon -->
+                                                                        <input type="file"
+                                                                            class="form-control form-control-sm d-none"
+                                                                            id="bankdetails-update-{{ $bankdetails }}"
+                                                                            data-document-type="bankdetails"
+                                                                            data-file-to-update="{{ $bankdetails }}"
+                                                                            accept=".jpg,.jpeg,.png,.pdf"
+                                                                            onchange="updateDocument(this)">
+                                                                        <a href="javascript:void(0);"
+                                                                            class="text-success ms-2"
+                                                                            onclick="document.getElementById('bankdetails-update-{{ $bankdetails }}').click()"
+                                                                            data-bs-toggle="tooltip"
+                                                                            data-bs-original-title="Edit">
+                                                                            <i data-feather="edit"></i>
+                                                                        </a>
+
+                                                                        <!-- Delete Icon -->
+                                                                        <a href="javascript:void(0);"
+                                                                            class="text-danger ms-2"
+                                                                            onclick="deleteDocument('bankdetails', '{{ $bankdetails }}')"
+                                                                            data-bs-toggle="tooltip"
+                                                                            data-bs-original-title="Delete">
+                                                                            <i data-feather="trash-2"></i>
+                                                                        </a>
+                                                                    </div>
+                                                                @endforeach
+                                                                <!-- Add More Documents -->
+                                                                <a href="javascript:void(0);"
+                                                                    class="text-primary mt-2"
+                                                                    onclick="addMoreDocuments('bankdetails')"
+                                                                    data-bs-toggle="tooltip"
+                                                                    data-bs-original-title="Add More">
+                                                                    <i class="ti-plus"></i>
+                                                                </a>
+                                                            @else
+                                                                <!-- Upload Icon -->
+                                                                <a href="javascript:void(0);"
+                                                                    class="text-primary"
+                                                                    onclick="addMoreDocuments('bankdetails')"
                                                                     data-bs-toggle="tooltip"
                                                                     data-bs-original-title="Upload">
                                                                     <i data-feather="upload"></i>

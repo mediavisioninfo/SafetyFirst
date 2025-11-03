@@ -610,6 +610,7 @@ if (!function_exists('userLoggedHistory')) {
                 'vehicle'             => 'VPH',
                 'under_repair'        => 'URP',
                 'final'               => 'FIP',
+                'bankdetails'         => 'BDF',
                 'send_mail'           => 'EML',
             ];
 
@@ -617,7 +618,10 @@ if (!function_exists('userLoggedHistory')) {
         }
     }
 
-    
+    // 🔧 Fix for "Call to undefined function Mpdf\Image\imagecreatefromstring()"
+    // if (!function_exists('imagecreatefromstring')) {
+    //     throw new \Exception("There was a problem processing images in the PDF. Please contact support — image library missing.");
+    // }
     
 
 }

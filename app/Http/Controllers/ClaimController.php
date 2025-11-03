@@ -1,5 +1,6 @@
 <?php
 
+
 namespace App\Http\Controllers;
 
 use App\Models\Claim;
@@ -14,7 +15,7 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 use Illuminate\Support\Facades\Validator;
 use Twilio\Rest\Client as TwilioClient;
-use GuzzleHttp\Client as GuzzleClient; 
+use GuzzleHttp\Client as GuzzleClient;
 use Log;
 // use Mpdf\Mpdf;
 use setasign\Fpdi\Fpdi;
@@ -117,13 +118,13 @@ class ClaimController extends Controller
                         break;
                     case 'this_week':
                         $query->whereBetween('created_at', [
-                            Carbon::now()->startOfWeek(), 
+                            Carbon::now()->startOfWeek(),
                             Carbon::now()->endOfWeek()
                         ]);
                         break;
                     case 'this_month':
                         $query->whereBetween('created_at', [
-                            Carbon::now()->startOfMonth(), 
+                            Carbon::now()->startOfMonth(),
                             Carbon::now()->endOfMonth()
                         ]);
                         break;
@@ -131,8 +132,7 @@ class ClaimController extends Controller
                         $query->whereYear('created_at', Carbon::now()->year);
                         break;
                 }
-            }
-            elseif ($request->filled('start_date') && $request->filled('end_date')) {
+            } elseif ($request->filled('start_date') && $request->filled('end_date')) {
                 $startDate = Carbon::parse($request->start_date)->startOfDay();
                 $endDate = Carbon::parse($request->end_date)->endOfDay();
                 $query->whereBetween('created_at', [$startDate, $endDate]);
@@ -144,20 +144,20 @@ class ClaimController extends Controller
 
             if ($vehicleType == '2') {
                 $insuranceDetailQuery->where('seating_capacity', 2)
-                                    ->whereNotNull('seating_capacity')
-                                    ->where('seating_capacity', '!=', 0);
+                    ->whereNotNull('seating_capacity')
+                    ->where('seating_capacity', '!=', 0);
             } elseif ($vehicleType == '3') {
                 $insuranceDetailQuery->where('seating_capacity', 3)
-                                    ->whereNotNull('seating_capacity')
-                                    ->where('seating_capacity', '!=', 0);
+                    ->whereNotNull('seating_capacity')
+                    ->where('seating_capacity', '!=', 0);
             } elseif ($vehicleType == '4') {
                 $insuranceDetailQuery->whereIn('seating_capacity', [4, 5])
-                                    ->whereNotNull('seating_capacity')
-                                    ->where('seating_capacity', '!=', 0);
+                    ->whereNotNull('seating_capacity')
+                    ->where('seating_capacity', '!=', 0);
             } elseif ($vehicleType == 'more') {
                 $insuranceDetailQuery->where('seating_capacity', '>', 5)
-                                    ->whereNotNull('seating_capacity')
-                                    ->where('seating_capacity', '!=', 0);
+                    ->whereNotNull('seating_capacity')
+                    ->where('seating_capacity', '!=', 0);
             }
 
             if ($vehicleType) {
@@ -171,7 +171,7 @@ class ClaimController extends Controller
             if ($request->filled('company_id')) {
                 $query->where('insurance_company_id', $request->company_id);
             }
-            
+
 
             // FINAL CLAIMS
             $claims = $query->orderBy('created_at', 'desc')->get();
@@ -182,7 +182,7 @@ class ClaimController extends Controller
             $feesBillData = ProfessionalFee::whereIn('claim_id', $claims->pluck('id'))->get()->keyBy('claim_id');
             $companies = InsuranceCompany::all(); // adjust model name as per your DB
 
-            return view('claim.index', compact('claims','feesBillData','insuranceDetail','states','usersType','companies'));
+            return view('claim.index', compact('claims', 'feesBillData', 'insuranceDetail', 'states', 'usersType', 'companies'));
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
@@ -200,7 +200,7 @@ class ClaimController extends Controller
             $insurance_companies = InsuranceCompany::pluck('name', 'id');
             $states = State::pluck('name', 'id');
 
-            return view('claim.create', compact('customer', 'status','states','insurance_companies'));
+            return view('claim.create', compact('customer', 'status', 'states', 'insurance_companies'));
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
@@ -262,38 +262,38 @@ class ClaimController extends Controller
                 null,
                 $claim->toArray()
             );
-    
-        try {
-            $uploadLink = route('claim.upload', ['id' => Crypt::encrypt($claim->id)]);
-            $uploadLink = $this->shortenUrl7($uploadLink); // Use your own domain here
-            $mail = new PHPMailer(true);
 
-            //Server settings
-            $mail->isSMTP();
-            $mail->Host = env('MAIL_HOST'); // e.g., smtp.gmail.com
-            $mail->SMTPAuth = true;
-            $mail->Username = env('MAIL_USERNAME'); // Gmail username
-            $mail->Password = env('MAIL_PASSWORD'); // Gmail password
-            $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-            $mail->Port = env('MAIL_PORT', 465); 
+            try {
+                $uploadLink = route('claim.upload', ['id' => Crypt::encrypt($claim->id)]);
+                $uploadLink = $this->shortenUrl7($uploadLink); // Use your own domain here
+                $mail = new PHPMailer(true);
 
-            //Recipients
-            $mail->setFrom(env('MAIL_FROM_ADDRESS'), env('MAIL_FROM_NAME'));
-            $mail->addAddress($request->email);  // Add recipient
+                //Server settings
+                $mail->isSMTP();
+                $mail->Host = env('MAIL_HOST'); // e.g., smtp.gmail.com
+                $mail->SMTPAuth = true;
+                $mail->Username = env('MAIL_USERNAME'); // Gmail username
+                $mail->Password = env('MAIL_PASSWORD'); // Gmail password
+                $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+                $mail->Port = env('MAIL_PORT', 465);
 
-            // Content
-            $mail->isHTML(true);
-            $mail->Subject = 'Upload Your Claim Documents';
-            $mail->Body = "Please upload your documents using the following link: <a href='$uploadLink'>$uploadLink</a>";
+                //Recipients
+                $mail->setFrom(env('MAIL_FROM_ADDRESS'), env('MAIL_FROM_NAME'));
+                $mail->addAddress($request->email);  // Add recipient
 
-            $mail->send();
+                // Content
+                $mail->isHTML(true);
+                $mail->Subject = 'Upload Your Claim Documents';
+                $mail->Body = "Please upload your documents using the following link: <a href='$uploadLink'>$uploadLink</a>";
 
-            $claim->status = 'link_shared';
-            $claim->save();
-           } catch (\Exception $e) {
-           
-           }
-            if($claim->status == 'link_shared'){
+                $mail->send();
+
+                $claim->status = 'link_shared';
+                $claim->save();
+            } catch (\Exception $e) {
+
+            }
+            if ($claim->status == 'link_shared') {
                 $authKey = env('SMSCOUNTRY_AUTHKEY');
                 $authToken = env('SMSCOUNTRY_AUTHTOKEN');
                 $senderId = env('SMSCOUNTRY_SENDERID');
@@ -340,7 +340,7 @@ class ClaimController extends Controller
                         'Authorization' => "Basic $auth",
                         'Content-Type' => 'application/json'
                     ])->timeout(30) // seconds, default 10
-                    ->post("https://restapi.smscountry.com/v0.1/Accounts/$authKey/SMSes", $data);
+                        ->post("https://restapi.smscountry.com/v0.1/Accounts/$authKey/SMSes", $data);
 
                     $responseData = $response->json();
 
@@ -354,8 +354,8 @@ class ClaimController extends Controller
                     }
                 }
             }
-        
-        return redirect()->route('claim.show', Crypt::encrypt($claim->id))->with('success', __('Claim successfully created.'));
+
+            return redirect()->route('claim.show', Crypt::encrypt($claim->id))->with('success', __('Claim successfully created.'));
 
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
@@ -419,8 +419,8 @@ class ClaimController extends Controller
             'apikey' => env('REBRANDLY_API_KEY'),
             'Content-Type' => 'application/json',
         ])->post('https://api.rebrandly.com/v1/links', [
-            'destination' => $longUrl
-        ]);
+                    'destination' => $longUrl
+                ]);
 
         if ($response->successful()) {
             return $response->json()['shortUrl'];
@@ -434,8 +434,8 @@ class ClaimController extends Controller
     {
         $response = Http::withToken(env('BITLY_TOKEN'))
             ->post('https://api-ssl.bitly.com/v4/shorten', [
-                'long_url' => $longUrl
-            ]);
+            'long_url' => $longUrl
+        ]);
 
         if ($response->successful()) {
             return $response->json()['link'];
@@ -478,25 +478,25 @@ class ClaimController extends Controller
     public function assignClaims(Request $request)
     {
         $claimIds = json_decode($request->input('claim_ids'), true);
-        
+
         if (\Auth::user()->can('manage claim')) {
             $validatedData = $request->merge(['claim_ids' => $claimIds])->validate([
                 'user_id' => 'required|exists:users,id',
                 'claim_ids' => 'required|array',
                 'claim_ids.*' => 'exists:claims,id',
             ]);
-    
+
             $userId = $validatedData['user_id'];
-            
+
             // Update claims to assign them to the selected user
             Claim::whereIn('id', $claimIds)->update(['user_id' => $userId]);
-    
+
             return redirect()->route('claim.index')->with('success', __('Claims successfully assigned.'));
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
     }
-    
+
 
     private function shortenUrl($longUrl)
     {
@@ -518,15 +518,15 @@ class ClaimController extends Controller
             $id = Crypt::decrypt($ids);
             $claim = Claim::find($id);
             $ocrResults = json_decode($claim->ocr_results, true);
-            $numberPlate = json_decode($claim->number_plate_file,true);
+            $numberPlate = json_decode($claim->number_plate_file, true);
             $vehicleNumber = $claim->vehicle_number;
             // dd($numberPlateNumber);
             $cleanedOcrResults = null;
-    
+
             if ($ocrResults !== null) {
                 $cleanedOcrResults = $this->cleanOcrResults($ocrResults);
             }
-    
+
             // Process Insurance details using the extractor
             //commented by tanuja 24-07-25
             /*$insurance = $claim->insurances;
@@ -534,7 +534,7 @@ class ClaimController extends Controller
                 $insuranceExtractor = new InsuranceDetailExtractor($claim->ocr_results);
                 $insuranceDetails = $insuranceExtractor->extract(); 
             }
-            
+
             // Save Insurance details if not already saved
             $existingInsuranceDetail = InsuranceDetail::where('claim_id', $claim->id)->first();
             if (!$existingInsuranceDetail) {
@@ -611,11 +611,11 @@ class ClaimController extends Controller
 
             // Fallback: if still null, use empty model to avoid null errors in Blade
             $insuranceDetail = $insuranceDetail ?? new InsuranceDetail();
-            
+
             // Process DL details using the extractor for the OCR results
             $dlExtractor = new DrivingLicenseDetailExtractor($claim->ocr_results);  // Assuming DL extractor exists
             $dlDetails = $dlExtractor->extract();
-    
+
             // Check if DL details already exist for the claim
             $existingDlDetail = DlDetail::where('claim_id', $claim->id)->first();
             if (!$existingDlDetail) {
@@ -638,7 +638,7 @@ class ClaimController extends Controller
             }
             // Damage Results (if applicable)
             $damageResults = json_decode($claim->damage_result, true);
-            
+
             //07-feb-2025 add by tanuja
             $damageResultsAll = json_decode($claim->all_damage_result, true);
             // dd($damageResultsAll);
@@ -648,7 +648,7 @@ class ClaimController extends Controller
             $vehicleDepreciationData = $damageResultsAll['vehicleDepreciation'] ?? [];
             $paintDepreciationData = $damageResultsAll['paintDepreciation'] ?? [];
             $depreciationTypeData = $damageResultsAll['depreciationType'] ?? [];
-            
+
             if (!empty($insuranceDetail->make)) {
                 $parts = Part::where('brand', $insuranceDetail->make)->where('model', $insuranceDetail->model)->get();
                 if ($parts->isEmpty()) {
@@ -657,7 +657,7 @@ class ClaimController extends Controller
                     });
                 }
             } else {
-                $parts = Part::all(); 
+                $parts = Part::all();
             }
 
             $vehicleDepreciation = VehicleDepreciation::all();
@@ -668,9 +668,9 @@ class ClaimController extends Controller
             $templates = EmailTemplate::all();
 
             $emailLogs = Email::where('claim_id', $claim->id)
-                        ->orderBy('created_at', 'desc')
-                        ->get();
-            
+                ->orderBy('created_at', 'desc')
+                ->get();
+
             // Return the view with all the necessary data
             return view('claim.show', compact(
                 'claim',
@@ -697,7 +697,7 @@ class ClaimController extends Controller
             return redirect()->back()->with('error', __('Permission denied.'));
         }
     }
-    
+
     //07-feb-2025 add by tanuja
     // Controller Method to Handle the Data Update
     public function updateAllData(Request $request, $claimId)
@@ -742,7 +742,7 @@ class ClaimController extends Controller
             $totalPrice = array_sum(array_column($damageResults, 'price'));
             $totalLabour = array_sum(array_column($damageResults, 'labour'));
             $totalPaintSum = array_sum(array_column($damageResults, 'paint'));
-            $totalPaint = $totalPaintSum -(($totalPaintSum * $claim->paint_depreciation)/100);
+            $totalPaint = $totalPaintSum - (($totalPaintSum * $claim->paint_depreciation) / 100);
             // Calculate total tax
             $totalTax = 0;
             foreach ($damageResults as $part) {
@@ -762,32 +762,32 @@ class ClaimController extends Controller
             return response()->json(['success' => false, 'message' => 'Permission denied.'], 403);
         }
     }
-    
+
     public function updatePartDetails(Request $request, $id)
     {
         if (!\Auth::user()->can('edit claim')) {
             return response()->json(['success' => false, 'message' => 'Permission denied.'], 403);
         }
-    
+
         $claim = Claim::findOrFail($id);
         $damageResults = json_decode($claim->damage_result, true) ?? [];
         $index = $request->input('index');
-    
+
         if (isset($damageResults[$index])) {
             // Update the specific part's details
             $damageResults[$index]['paint'] = $request->input('paint');
             $damageResults[$index]['tax'] = $request->input('tax');
             $damageResults[$index]['labour'] = $request->input('labour');
             $damageResults[$index]['price'] = $request->input('price');
-    
+
             $claim->damage_result = json_encode($damageResults);
             $claim->save();
-    
+
             // Calculate new totals
             $totalPrice = array_sum(array_column($damageResults, 'price'));
             $totalLabour = array_sum(array_column($damageResults, 'labour'));
             $totalPaintSum = array_sum(array_column($damageResults, 'paint'));
-            $totalPaint = $totalPaintSum -(($totalPaintSum * $claim->paint_depreciation)/100);
+            $totalPaint = $totalPaintSum - (($totalPaintSum * $claim->paint_depreciation) / 100);
             // Calculate total tax
             $totalTax = 0;
             foreach ($damageResults as $part) {
@@ -804,7 +804,7 @@ class ClaimController extends Controller
                 'totalTax' => $totalTax
             ]);
         }
-    
+
         return response()->json(['success' => false, 'message' => 'Part not found.'], 404);
     }
 
@@ -814,15 +814,15 @@ class ClaimController extends Controller
         if (\Auth::user()->can('edit claim')) {
             $claim = Claim::findOrFail($id);
             $damageResults = json_decode($claim->all_damage_result, true) ?? [];
-    
+
             // Get the index of the part to remove
             $indexToRemove = $request->input('index');
-    
+
             // Remove the part from damageResults
             if (isset($damageResults['damageTableData'][$indexToRemove])) {
                 array_splice($damageResults['damageTableData'], $indexToRemove, 1); // Remove the part at the given index
             }
-    
+
             // Update the claim with the new damage results
             $claim->all_damage_result = json_encode($damageResults);
             $claim->save();
@@ -841,7 +841,7 @@ class ClaimController extends Controller
         $claim = Claim::findOrFail($id);
         $damageResults = json_decode($claim->all_damage_result, true) ?? [];
 
-        
+
         // Get the index of the part to remove
         $indexToRemove = $request->input('index');
 
@@ -859,8 +859,8 @@ class ClaimController extends Controller
             'success' => true
         ]);
     }
-    
-    
+
+
     public function updatePaintDepreciation(Request $request, $id)
     {
         // Validate the incoming request to ensure it's a valid percentage string
@@ -889,7 +889,7 @@ class ClaimController extends Controller
             $states = State::pluck('name', 'id');
             $cities = City::where('state_id', $claim->state_id)->pluck('name', 'id');
 
-            return view('claim.edit', compact('customer', 'status','claim','insurance_companies','states','cities'));
+            return view('claim.edit', compact('customer', 'status', 'claim', 'insurance_companies', 'states', 'cities'));
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
@@ -900,7 +900,8 @@ class ClaimController extends Controller
     {
         if (\Auth::user()->can('edit claim')) {
             $validator = \Validator::make(
-                $request->all(), [
+                $request->all(),
+                [
                     'date' => 'required',
                     'status' => 'required',
                     'loss_date' => 'nullable|date',
@@ -941,10 +942,10 @@ class ClaimController extends Controller
 
             $claim->save();
 
-            if($request->status == 'link_shared'){
+            if ($request->status == 'link_shared') {
                 $uploadLink = route('claim.upload', ['id' => Crypt::encrypt($claim->id)]);
                 $uploadLink = $this->shortenUrl7($uploadLink); // Use your own domain here
-                
+
                 $authKey = env('SMSCOUNTRY_AUTHKEY');
                 $authToken = env('SMSCOUNTRY_AUTHTOKEN');
                 $senderId = env('SMSCOUNTRY_SENDERID');
@@ -1024,8 +1025,8 @@ class ClaimController extends Controller
                 $claimData,
                 null
             );
-            $id=$claim->id;
-            ClaimDocument::where('claim',$id)->delete();
+            $id = $claim->id;
+            ClaimDocument::where('claim', $id)->delete();
             $claim->delete();
             return redirect()->back()->with('success', 'Claim successfully deleted.');
         } else {
@@ -1045,10 +1046,10 @@ class ClaimController extends Controller
 
     public function getInsurance(Request $request)
     {
-        $insurances = Insurance::where('customer', $request->customer)->orderBy('id','desc')->get();
-        $response=[];
+        $insurances = Insurance::where('customer', $request->customer)->orderBy('id', 'desc')->get();
+        $response = [];
         foreach ($insurances as $insurance) {
-            $response[$insurance->id]=insurancePrefix().$insurance->insurance_id;
+            $response[$insurance->id] = insurancePrefix() . $insurance->insurance_id;
         }
 
         return response()->json($response);
@@ -1056,21 +1057,22 @@ class ClaimController extends Controller
 
     public function documentCreate($claimId)
     {
-        $claim=Claim::find($claimId);
-        $insurance=Insurance::find($claim->insurance);
-        $docTypes=!empty($insurance->policies)?explode(',',$insurance->policies->claim_required_document):[];
-        $documentType=DocumentType::whereIn('id',$docTypes)->get()->pluck('title','id');
-        $documentType->prepend(__('Select Document'),'');
+        $claim = Claim::find($claimId);
+        $insurance = Insurance::find($claim->insurance);
+        $docTypes = !empty($insurance->policies) ? explode(',', $insurance->policies->claim_required_document) : [];
+        $documentType = DocumentType::whereIn('id', $docTypes)->get()->pluck('title', 'id');
+        $documentType->prepend(__('Select Document'), '');
 
-        $status=Insurance::$docStatus;
-        return view('claim.document_create', compact('claimId','status','documentType'));
+        $status = Insurance::$docStatus;
+        return view('claim.document_create', compact('claimId', 'status', 'documentType'));
     }
 
     public function documentStore(Request $request, $claimId)
     {
         if (\Auth::user()->can('create document')) {
             $validator = \Validator::make(
-                $request->all(), [
+                $request->all(),
+                [
                     'document_type' => 'required',
                     'document' => 'required',
                     'status' => 'required',
@@ -1113,10 +1115,10 @@ class ClaimController extends Controller
         }
     }
 
-    public function documentDestroy($claimId,$documentId)
+    public function documentDestroy($claimId, $documentId)
     {
         if (\Auth::user()->can('delete document')) {
-            $document=ClaimDocument::find($documentId);
+            $document = ClaimDocument::find($documentId);
             $document->delete();
             return redirect()->back()->with('success', 'Document successfully deleted.');
         } else {
@@ -1137,8 +1139,10 @@ class ClaimController extends Controller
 
             // Send OTP via SMS
             $mobile = $claim->mobile;
-            if (substr($mobile, 0, 3) === '+91') $mobile = substr($mobile, 3);
-            if (substr($mobile, 0, 1) === '0') $mobile = substr($mobile, 1);
+            if (substr($mobile, 0, 3) === '+91')
+                $mobile = substr($mobile, 3);
+            if (substr($mobile, 0, 1) === '0')
+                $mobile = substr($mobile, 1);
             $mobile = '91' . $mobile;
 
             $authKey = env('SMSCOUNTRY_AUTHKEY');
@@ -1153,12 +1157,12 @@ class ClaimController extends Controller
                 'Authorization' => "Basic $auth",
                 'Content-Type' => 'application/json'
             ])->post("https://restapi.smscountry.com/v0.1/Accounts/$authKey/SMSes", [
-                "Text" => $message,
-                "Number" => $mobile,
-                "SenderId" => $senderId,
-                "TemplateId" => "1707174703017862364",
-                "Is_Unicode" => false
-            ]);
+                        "Text" => $message,
+                        "Number" => $mobile,
+                        "SenderId" => $senderId,
+                        "TemplateId" => "1707174703017862364",
+                        "Is_Unicode" => false
+                    ]);
 
             return view('claim.enter_otp', compact('claimId', 'encryptedId'));
 
@@ -1216,7 +1220,7 @@ class ClaimController extends Controller
 
         if (!Session::get("otp_verified_$claimId")) {
             return redirect()->route('claim.upload.otp', ['id' => $id])
-                            ->with('error', 'Please verify OTP first.');
+                ->with('error', 'Please verify OTP first.');
         }
 
         //Clear OTP session after successful access
@@ -1242,22 +1246,39 @@ class ClaimController extends Controller
             if ($request->input('document_type') === 'vehicle_number') {
                 return $this->handleVehicleNumber($request);
             }
-    
+
             // Handle cause of accident submission
             if ($request->input('document_type') === 'cause_of_accident') {
                 return $this->handleCauseOfAccident($request);
             }
-    
+
             // Handle FIR file upload separately
             if ($request->input('document_type') === 'fir-copy') {
                 return $this->handleFIRFileUpload($request);
             }
-    
+
             // Handle file uploads for other document types
             $documentType = $request->input('document_type');
             $validDocumentTypes = [
-                'aadhaar', 'rcbook', 'pan_card','tax_receipt','sales_invoice','dl', 'other_dl','insurance', 'photos', 'video',
-                'claimform', 'claimintimation', 'satisfactionvoucher', 'finalbill', 'number_plate', 'paymentreceipt','under_repair','final'
+                'aadhaar',
+                'rcbook',
+                'pan_card',
+                'tax_receipt',
+                'sales_invoice',
+                'dl',
+                'other_dl',
+                'insurance',
+                'photos',
+                'video',
+                'claimform',
+                'claimintimation',
+                'satisfactionvoucher',
+                'finalbill',
+                'number_plate',
+                'paymentreceipt',
+                'bankdetails',
+                'under_repair',
+                'final'
             ];
             if (!in_array($documentType, $validDocumentTypes)) {
                 return response()->json(['error' => 'Invalid document type'], 400);
@@ -1272,18 +1293,18 @@ class ClaimController extends Controller
             }
             $claim = Claim::findOrFail($request->input('claim_id'));
             if (in_array($documentType, ['photos', 'under_repair', 'final'])) {
-                $uploadedFiles = $this->handlePhotoUploadWithGeotag($request->file('files'), $request->input('geotags'), $request->input('captureTimes'), $claim->id,  $documentType);
-            } else if($documentType === 'number_plate'){
+                $uploadedFiles = $this->handlePhotoUploadWithGeotag($request->file('files'), $request->input('geotags'), $request->input('captureTimes'), $claim->id, $documentType);
+            } else if ($documentType === 'number_plate') {
                 $uploadedFiles = $this->handleNumberPlateUploadWithGeotag($request->file('files'), $request->input('geotag'), $request->input('captureTime'), $claim->id);
-            }else {
+            } else {
                 $uploadedFiles = $this->handleFileUpload($request->file('files'), $documentType, $claim->id);
             }
 
-    
+
             $this->updateClaimWithUploadedFiles($claim, $documentType, $uploadedFiles);
 
             if ($documentType === 'aadhaar' && !empty($uploadedFiles)) {
-                $claimHash  = md5($claim->id);
+                $claimHash = md5($claim->id);
                 $folderCode = $this->getFolderCode($documentType);
                 $aadhaarFilePath = config('constant.claim_upload_path') . "/$claimHash/{$folderCode}/" . $uploadedFiles[0];
 
@@ -1300,11 +1321,13 @@ class ClaimController extends Controller
                 } catch (\Exception $e) {
                     Log::error("Failed to extract Aadhaar info: " . $e->getMessage());
                 } finally {
-                    if (file_exists($decryptedPath)) unlink($decryptedPath);
-                    if (file_exists($processedPath)) unlink($processedPath);
+                    if (file_exists($decryptedPath))
+                        unlink($decryptedPath);
+                    if (file_exists($processedPath))
+                        unlink($processedPath);
                 }
             }
-            
+
             // Check if all documents are uploaded and update status if necessary
             if ($this->allDocumentsUploaded($claim)) {
                 $claim->status = 'documents_submitted';
@@ -1398,7 +1421,7 @@ class ClaimController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'claim_id' => 'required|exists:claims,id',
-            'vehicle_number' => 'required|string|max:15', 
+            'vehicle_number' => 'required|string|max:15',
         ]);
 
         if ($validator->fails()) {
@@ -1406,7 +1429,7 @@ class ClaimController extends Controller
         }
 
         $claim = Claim::findOrFail($request->input('claim_id'));
-        $claim->vehicle_number = $request->input('vehicle_number'); 
+        $claim->vehicle_number = $request->input('vehicle_number');
         $claim->save();
 
         return response()->json([
@@ -1419,7 +1442,7 @@ class ClaimController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'claim_id' => 'required|exists:claims,id',
-            'cause_of_accident' => 'required|string|max:900', 
+            'cause_of_accident' => 'required|string|max:900',
         ]);
 
         if ($validator->fails()) {
@@ -1454,7 +1477,7 @@ class ClaimController extends Controller
         // Handle FIR file upload
         // $firFilename = $this->handleSingleFileUpload($firFile, 'fir');
         $firFilename = $this->handleSingleFileUpload($request->file('files'), 'fir', $claim->id);
-        
+
         // Update the FIR file column in the database
         $claim->fir_file = $firFilename;
         $claim->save();
@@ -1469,7 +1492,7 @@ class ClaimController extends Controller
     private function handleFileUpload($files, $documentType, $claimId)
     {
         $uploadedFiles = [];
-        $claimHash  = md5($claimId);
+        $claimHash = md5($claimId);
         $folderCode = $this->getFolderCode($documentType);
         $dir = config('constant.claim_upload_path') . "/$claimHash/{$folderCode}";
 
@@ -1495,9 +1518,9 @@ class ClaimController extends Controller
 
     private function handleSingleFileUpload($files, $documentType, $claimId)
     {
-        $claimHash  = md5($claimId);
+        $claimHash = md5($claimId);
         $folderCode = $this->getFolderCode($documentType);
-        $dir        = config('constant.claim_upload_path') . "/$claimHash/{$folderCode}";
+        $dir = config('constant.claim_upload_path') . "/$claimHash/{$folderCode}";
 
         if (!file_exists($dir)) {
             mkdir($dir, 0777, true);
@@ -1512,8 +1535,8 @@ class ClaimController extends Controller
 
         foreach ($files as $file) {
             $filenameWithExt = $file->getClientOriginalName();
-            $filename        = pathinfo($filenameWithExt, PATHINFO_FILENAME);
-            $extension       = $file->getClientOriginalExtension();
+            $filename = pathinfo($filenameWithExt, PATHINFO_FILENAME);
+            $extension = $file->getClientOriginalExtension();
             $fileNameToStore = md5($filename . time() . rand()) . '.' . $extension;
 
             //Encrypt the file before saving
@@ -1529,23 +1552,24 @@ class ClaimController extends Controller
     function getFolderCode($documentType)
     {
         $codeMap = [
-            'number_plate'        => 'NPX',
-            'aadhaar'             => 'AAX',
-            'pan_card'            => 'PNX',
-            'tax_receipt'         => 'TXP',
-            'sales_invoice'       => 'SIV',
-            'dl'                  => 'DLX',
-            'other_dl'            => 'DLX',
-            'rcbook'              => 'RCB',
-            'insurance'           => 'INC',
-            'claimform'           => 'CMF',
-            'claimintimation'     => 'CMI',
+            'number_plate' => 'NPX',
+            'aadhaar' => 'AAX',
+            'pan_card' => 'PNX',
+            'tax_receipt' => 'TXP',
+            'sales_invoice' => 'SIV',
+            'dl' => 'DLX',
+            'other_dl' => 'DLX',
+            'rcbook' => 'RCB',
+            'insurance' => 'INC',
+            'claimform' => 'CMF',
+            'claimintimation' => 'CMI',
             'satisfactionvoucher' => 'SFV',
-            'fir'                 => 'FRC',
-            'paymentreceipt'      => 'PYR',
-            'finalbill'           => 'FBL',
-            'video'               => 'VDX',
-            'send_mail'           => 'EML',
+            'fir' => 'FRC',
+            'paymentreceipt' => 'PYR',
+            'bankdetails' => 'BDF',
+            'finalbill' => 'FBL',
+            'video' => 'VDX',
+            'send_mail' => 'EML',
         ];
         return $codeMap[$documentType] ?? strtoupper(substr($documentType, 0, 3));
     }
@@ -1553,7 +1577,7 @@ class ClaimController extends Controller
     public function showImage($claimHash, $folder1, $folder2, $filename)
     {
         $basePath = config('constant.claim_upload_path');
-        
+
         // Aadhaar format (no subfolder): {claimHash}/{folder1}/{filename}
         if ($folder2 === 'null') {
             $path = "{$basePath}/{$claimHash}/{$folder1}/{$filename}";
@@ -1584,7 +1608,7 @@ class ClaimController extends Controller
         }
     }
 
-    
+
 
     private function handlePhotoUploadWithGeotag($files, $geotags, $captureTimes, $claimId, $photoType = 'vehicle')
     {
@@ -1592,20 +1616,20 @@ class ClaimController extends Controller
 
         // Step 1: Folder code mapping
         $photoTypeMap = [
-            'vehicle'       => 'VPH', // or VPH (Vehicle Photo)
-            'under_repair'  => 'URP',
-            'final'         => 'FIP',
+            'vehicle' => 'VPH', // or VPH (Vehicle Photo)
+            'under_repair' => 'URP',
+            'final' => 'FIP',
         ];
 
         $folderCode = $photoTypeMap[$photoType] ?? 'VPH';
 
         // Optional: claim hash to obscure claim ID
-        $claimHash  = md5($claimId);
+        $claimHash = md5($claimId);
 
         // Final secure storage path
-        $folderName   = "{$folderCode}";
-        $storagePath  = config('constant.claim_upload_path') ."/{$claimHash}/PHX/{$folderName}";
-        $pdfPath      = storage_path('app/photos/pdf');
+        $folderName = "{$folderCode}";
+        $storagePath = config('constant.claim_upload_path') . "/{$claimHash}/PHX/{$folderName}";
+        $pdfPath = storage_path('app/photos/pdf');
 
         // Ensure directories exist
         if (!file_exists($storagePath)) {
@@ -1618,8 +1642,8 @@ class ClaimController extends Controller
         // Step 2: Process each photo
         foreach ($files as $i => $file) {
             $origName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
-            $ext      = $file->getClientOriginalExtension();
-            $stored   = md5($origName . time() . rand()) . '.' . $ext;
+            $ext = $file->getClientOriginalExtension();
+            $stored = md5($origName . time() . rand()) . '.' . $ext;
 
             // Encrypt content and save
             $encryptedContents = Crypt::encrypt(file_get_contents($file));
@@ -1627,7 +1651,7 @@ class ClaimController extends Controller
 
             // Geotag parsing
             $geoJson = $geotags[$i] ?? null;
-            $geotag  = null;
+            $geotag = null;
             if ($geoJson && $geoJson !== 'null') {
                 $decoded = json_decode($geoJson, true);
                 if (json_last_error() !== JSON_ERROR_NONE) {
@@ -1637,9 +1661,9 @@ class ClaimController extends Controller
             }
 
             $uploadedFiles[] = [
-                'filename'    => $stored,
+                'filename' => $stored,
                 'captureTime' => $captureTimes[$i] ?? null,
-                'geotag'      => $geotag,
+                'geotag' => $geotag,
             ];
         }
 
@@ -1702,7 +1726,7 @@ class ClaimController extends Controller
     {
         $uploadedFiles = [];
         $folderCode = $this->getFolderCode('number_plate');
-        $claimHash  = md5($claimId);
+        $claimHash = md5($claimId);
         $storagePath = config('constant.claim_upload_path') . "/$claimHash/{$folderCode}";
 
         if (!file_exists($storagePath)) {
@@ -1722,9 +1746,9 @@ class ClaimController extends Controller
         $geotag = json_decode($geotags, true);
 
         $uploadedFiles[] = [
-            'filename'     => $fileNameToStore,
-            'geotag'       => $geotag,
-            'captureTime'  => $captureTimes
+            'filename' => $fileNameToStore,
+            'geotag' => $geotag,
+            'captureTime' => $captureTimes
         ];
 
         // Extract vehicle number
@@ -1748,7 +1772,7 @@ class ClaimController extends Controller
 
         // Decode the JSON response
         $result = json_decode($response->getBody(), true);
-        
+
         // Check if OCR text extraction was successful
         if (isset($result['ParsedResults'][0]['ParsedText'])) {
             return $result['ParsedResults'][0]['ParsedText'];
@@ -1818,6 +1842,7 @@ class ClaimController extends Controller
             'number_plate' => 'number_plate_file',
             'fir' => 'fir_file',
             'paymentreceipt' => 'payment_receipt_files',
+            'bankdetails' => 'bank_details_files',
         ];
         return $fieldMap[$documentType] ?? null;
     }
@@ -1852,16 +1877,16 @@ class ClaimController extends Controller
         return true;
     }
 
-// public function generateReport($claimId)
+    // public function generateReport($claimId)
 // {
 //     // Fetch the claim details from the database
 //     $claim = Claim::findOrFail($claimId);
 
-//     // Decode JSON data
+    //     // Decode JSON data
 //     $damageResults = json_decode($claim->damage_result, true);
 //     $ocrResults = json_decode($claim->ocr_results, true);
 
-//     // Clean OCR results
+    //     // Clean OCR results
 //     $cleanedOcrResults = $this->cleanOcrResults($ocrResults);
 //     $latestVehicleDetails = VehicleRegistration::where('claim_id', $claimId)
 //     ->orderBy('created_at', 'desc') // or 'updated_at', 'desc'
@@ -1884,32 +1909,32 @@ class ClaimController extends Controller
 //         'latestVehicleDetails'=> $latestVehicleDetails,
 //     ];
 
-//     // Create a new instance of Mpdf
+    //     // Create a new instance of Mpdf
 //     $mpdf = new \Mpdf\Mpdf();
 
-//     // Load the view and render it as HTML
+    //     // Load the view and render it as HTML
 //     $html = view('claim.report', $data)->render();
 //     $mpdf->WriteHTML($html);
 
-//     // // Merge the PDF files (insurance, claim_form, claim_intimation, satisfaction_voucher, consent_form)
+    //     // // Merge the PDF files (insurance, claim_form, claim_intimation, satisfaction_voucher, consent_form)
 //     // $this->mergePdfFile($mpdf, $claim->claim_form_file, 'claimform');
 //     // $this->mergePdfFile($mpdf, $claim->claim_intimation_file, 'claimintimation');
 //     // // $this->mergePdfFile($mpdf, $claim->satisfaction_voucher_file, 'satisfactionvoucher');
 //     // $this->mergePdfFile($mpdf, $claim->consent_form_file, 'consentform');
 //     // $this->mergePdfFile($mpdf, $claim->insurance_file, 'insurance');
 
-//     // // Handle merging of Aadhaar, RC-book, and DL images (two images per page)
+    //     // // Handle merging of Aadhaar, RC-book, and DL images (two images per page)
 //     // $this->mergeImagesIntoPDF($mpdf, json_decode($claim->aadhaar_files), 'aadhaar', 'Aadhaar');
 //     // $this->mergeImagesIntoPDF($mpdf, json_decode($claim->rcbook_files), 'rcbook', 'RC-Book');
 //     // $this->mergeImagesIntoPDF($mpdf, json_decode($claim->dl_files), 'dl', 'Driving License');
 
-//     // // Handle photo files (up to 20 images)
+    //     // // Handle photo files (up to 20 images)
 //     // $this->mergeImagesIntoPDF($mpdf, json_decode($claim->photo_files, true), 'photos', 'Photos', 20, true);
 
-//     // // Handle processed image files (up to 20 images)
+    //     // // Handle processed image files (up to 20 images)
 //     // $this->mergeImagesIntoPDF($mpdf, json_decode($claim->processed_image_files), 'processed_image', 'Processed Images', 20);
 
-//     // Output the generated PDF to the browser for download
+    //     // Output the generated PDF to the browser for download
 //     return $mpdf->Output('claim_report_' . $claimId . '.pdf', 'D');
 // }
 
@@ -1942,7 +1967,7 @@ class ClaimController extends Controller
     //         // Generate HTML for current sheet only
     //         $htmlWriter = new HtmlWriter($spreadsheet);
     //         $htmlWriter->setSheetIndex($index); // important!
-            
+
     //         ob_start();
     //         $htmlWriter->save('php://output');
     //         $html = ob_get_clean();
@@ -1978,13 +2003,13 @@ class ClaimController extends Controller
     {
         $claim = Claim::findOrFail($claimId);
         $damageResults = json_decode($claim->damage_result, true);
-        
+
         //added by tanuja
         $damageResultsAll = json_decode($claim->all_damage_result, true);
         $damageTableResult = $damageResultsAll['damageTableData'] ?? [];
         $labourTableResult = $damageResultsAll['labourTableData'] ?? [];
         $summaryTableResult = $damageResultsAll['summaryTableData'] ?? [];
-        
+
         $latestVehicleDetails = VehicleRegistration::where('claim_id', $claimId)
             ->orderBy('created_at', 'desc')
             ->first();
@@ -2001,7 +2026,7 @@ class ClaimController extends Controller
             $registrationDate = new \Carbon\Carbon($latestVehicleDetails->registration_date);
             $currentDate = \Carbon\Carbon::now();
             $vehicleAgeInYears = $registrationDate->diffInMonths($currentDate) / 12; // Age in years
-        
+
             // Get the depreciation percentage based on the vehicle's age
             $depreciationRecord = \DB::table('vehicle_depreciation')
                 ->where('vehicle_age', '<=', $vehicleAgeInYears)
@@ -2044,7 +2069,7 @@ class ClaimController extends Controller
         ];
 
         // Generate the HTML report using mPDF
-        $mpdf = new \Mpdf\Mpdf();
+        $mpdf = new \Mpdf\Mpdf(['allow_output_buffering' => true]);
         $html = view('claim.report', $data)->render();
         $mpdf->WriteHTML($html);
 
@@ -2053,7 +2078,7 @@ class ClaimController extends Controller
         // $this->mergeImagesIntoPDF($mpdf, json_decode($claim->dl_files), 'dl', 'Driving License');
         // $this->mergeImagesIntoPDF($mpdf, json_decode($claim->photo_files, true), 'photos', 'Photos', 20, true);
         // $this->mergeImagesIntoPDF($mpdf, json_decode($claim->processed_image_files), 'processed_image', 'Processed Images', 20);
-        
+
         // Merge image files into the mPDF document
         $this->mergeImagesIntoPDF($mpdf, json_decode($claim->aadhaar_files), 'aadhaar', 'Aadhaar', 6, false, $id);
         $this->mergeImagesIntoPDF($mpdf, json_decode($claim->pancard_file), 'pan_card', 'Pan Card', 6, false, $id);
@@ -2067,7 +2092,7 @@ class ClaimController extends Controller
         $this->mergeImagesIntoPDF($mpdf, json_decode($claim->photo_files, true), 'vehicle', 'Vehicle Photos', 6, true, $id);
         $this->mergeImagesIntoPDF($mpdf, json_decode($claim->under_repair_photo_files, true), 'under_repair', 'Under Repair Photos', 6, true, $id);
         $this->mergeImagesIntoPDF($mpdf, json_decode($claim->final_photo_files, true), 'final', 'Final Photos', 6, true, $id);
-        $this->mergeImagesIntoPDF($mpdf, json_decode($claim->processed_image_files), 'processed_image', 'Processed Images', 6,$id);
+        $this->mergeImagesIntoPDF($mpdf, json_decode($claim->processed_image_files), 'processed_image', 'Processed Images', 6, $id);
 
 
         // Generate a unique temporary file name
@@ -2082,13 +2107,14 @@ class ClaimController extends Controller
         // $this->addPdfFileToList($pdfFiles, $claim->satisfaction_voucher_file, 'satisfactionvoucher');
         // $this->addPdfFileToList($pdfFiles, $claim->consent_form_file, 'consentform');
         // $this->addPdfFileToList($pdfFiles, $claim->insurance_file, 'insurance');
-        
+
         $this->addPdfFileToList($pdfFiles, $claim->claim_form_file, 'claimform', $id);
         $this->addPdfFileToList($pdfFiles, $claim->claim_intimation_file, 'claimintimation', $id);
         $this->addPdfFileToList($pdfFiles, $claim->satisfaction_voucher_file, 'satisfactionvoucher', $id);
         $this->addPdfFileToList($pdfFiles, $claim->consent_form_file, 'consentform', $id);
         $this->addPdfFileToList($pdfFiles, $claim->insurance_file, 'insurance', $id);
         $this->addPdfFileToList($pdfFiles, $claim->insurance_file, 'paymentreceipt', $id);
+        $this->addPdfFileToList($pdfFiles, $claim->insurance_file, 'bankdetails', $id);
         $this->addPdfFileToList($pdfFiles, $claim->insurance_file, 'finalbill', $id);
 
         // Generate a unique output file name
@@ -2117,22 +2143,31 @@ class ClaimController extends Controller
 
     private function mergePdfFilesWithGhostscript($inputFiles, $outputFile)
     {
-        dd("hhj");
         $inputFilesString = implode(' ', array_map('escapeshellarg', $inputFiles));
         $command = "gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -sOutputFile=" . escapeshellarg($outputFile) . " " . $inputFilesString;
+
         exec($command, $output, $status);
-        $status = 0;
+
         if ($status !== 0) {
-            throw new \Exception("Failed to merge PDF files using Ghostscript.");
-            // throw new \Exception("Failed to merge PDF files using Ghostscript. Output: " . implode("\n", $output));
+            // Log the detailed Ghostscript error for debugging (not shown to user)
+            \Log::error('PDF Merge Failed', [
+                'command' => $command,
+                'output' => $output,
+                'status' => $status
+            ]);
+
+            // Throw a user-friendly message
+            throw new \Exception("Unable to generate the final PDF. Please check if all uploaded files are valid and try again.");
         }
     }
+
+
     private function mergePdfFile($mpdf, $fileName, $folder)
     {
         if ($fileName) {
             // Path to the PDF file
             $filePath = storage_path('upload/document/' . $folder . '/' . $fileName);
-            
+
             // Check if the PDF exists and merge into the PDF
             if (file_exists($filePath)) {
                 $pageCount = $mpdf->setSourceFile($filePath);
@@ -2144,14 +2179,14 @@ class ClaimController extends Controller
             }
         }
     }
-    
+
 
     public function downloadPhotosPdf(Claim $claim)
     {
         $photoSections = [
             'Vehicle Damage Photos' => ['key' => 'photo_files', 'folder' => 'VPH'],
-            'Under Repair Photos'   => ['key' => 'under_repair_photo_files', 'folder' => 'URP'],
-            'Final Photos'          => ['key' => 'final_photo_files', 'folder' => 'FIP'],
+            'Under Repair Photos' => ['key' => 'under_repair_photo_files', 'folder' => 'URP'],
+            'Final Photos' => ['key' => 'final_photo_files', 'folder' => 'FIP'],
         ];
 
         $claimHash = md5($claim->id);
@@ -2169,10 +2204,12 @@ class ClaimController extends Controller
 
         foreach ($photoSections as $sectionTitle => $info) {
             $photoJson = $claim->{$info['key']};
-            if (empty($photoJson)) continue;
+            if (empty($photoJson))
+                continue;
 
             $photos = json_decode($photoJson, true);
-            if (!is_array($photos)) continue;
+            if (!is_array($photos))
+                continue;
 
             // Start new page for each section
             $pdf->AddPage();
@@ -2187,10 +2224,12 @@ class ClaimController extends Controller
             $count = 0;
 
             foreach ($photos as $idx => $photo) {
-                if (!isset($photo['filename'])) continue;
+                if (!isset($photo['filename']))
+                    continue;
 
                 $photoPath = $folderPath . '/' . $photo['filename'];
-                if (!file_exists($photoPath)) continue;
+                if (!file_exists($photoPath))
+                    continue;
 
                 $decryptedTempPath = sys_get_temp_dir() . '/' . uniqid('photo_') . '.jpg';
 
@@ -2238,7 +2277,7 @@ class ClaimController extends Controller
             $pdf->Output('S', $filename),
             200,
             [
-                'Content-Type'        => 'application/pdf',
+                'Content-Type' => 'application/pdf',
                 'Content-Disposition' => "attachment; filename=\"{$filename}\"",
             ]
         );
@@ -2256,7 +2295,7 @@ class ClaimController extends Controller
      * @param int|null   $claimId            ID of the claim (used to generate folder hash)
      *
      * @return string Success or failure message
-    */
+     */
     private function mergeImagesIntoPDF($mpdf, $files, $folder, $label, $maxImages = 6, $includeMetadata = false, $claimId = null)
     {
         if (empty($files)) {
@@ -2270,14 +2309,14 @@ class ClaimController extends Controller
 
         // For grid layout (vehicle/under_repair/final)
         if ($isGridLayout) {
-            $cols    = 2;
-            $rows    = 3;
-            $cellW   = 90;
-            $cellH   = 65;
-            $gapX    = 10;
-            $gapY    = 10;
-            $startX  = 15;
-            $startY  = 25;
+            $cols = 2;
+            $rows = 3;
+            $cellW = 90;
+            $cellH = 65;
+            $gapX = 10;
+            $gapY = 10;
+            $startX = 15;
+            $startY = 25;
 
             foreach (array_chunk($files, $maxImages) as $pageImages) {
                 $mpdf->AddPage();
@@ -2291,7 +2330,8 @@ class ClaimController extends Controller
                     $folderCode = getFolderCode($folder);
 
                     $encryptedPath = config('constant.claim_upload_path') . "/{$claimHash}/PHX/{$folderCode}/{$filename}";
-                    if (!file_exists($encryptedPath)) continue;
+                    if (!file_exists($encryptedPath))
+                        continue;
 
                     try {
                         $tempPath = sys_get_temp_dir() . '/' . uniqid('pdfimg_') . '.jpg';
@@ -2323,29 +2363,38 @@ class ClaimController extends Controller
                 $folderCode = getFolderCode($folder);
                 $encryptedPath = config('constant.claim_upload_path') . "/{$claimHash}/{$folderCode}/{$filename}";
 
-                if (!file_exists($encryptedPath)) continue;
+                if (!file_exists($encryptedPath))
+                    continue;
 
                 try {
                     $tempPath = sys_get_temp_dir() . '/' . uniqid('pdfimg_') . '.jpg';
                     $decryptedContent = Crypt::decrypt(file_get_contents($encryptedPath));
                     file_put_contents($tempPath, $decryptedContent);
 
-                    list($w, $h) = getimagesize($tempPath);
-                    $maxW  = 190;
-                    $maxH  = 277;
+                    list($w, $h) = @getimagesize($tempPath);
+                    if (!$w || !$h) {
+                        throw new \Exception("Invalid image file");
+                    }
+
+                    $maxW = 190;
+                    $maxH = 277;
                     $scale = min($maxW / $w, $maxH / $h);
-                    $newW  = $w * $scale;
-                    $newH  = $h * $scale;
-                    $x     = (210 - $newW) / 2;
-                    $y     = (297 - $newH) / 2;
+                    $newW = $w * $scale;
+                    $newH = $h * $scale;
+                    $x = (210 - $newW) / 2;
+                    $y = (297 - $newH) / 2;
 
                     $mpdf->AddPage();
                     $mpdf->WriteHTML("<h4 style='text-align:center; margin-bottom:5mm;'>{$label}</h4>");
                     $mpdf->Image($tempPath, $x, $y, $newW, $newH, '', '', true, false);
-
                     unlink($tempPath);
                     $imagesAdded++;
                 } catch (\Exception $e) {
+                    \Log::error("PDF Image Merge Error: " . $e->getMessage(), [
+                        'file' => $filename ?? null,
+                        'folder' => $folder ?? null,
+                        'claim' => $claimId ?? null
+                    ]);
                     continue;
                 }
             }
@@ -2507,13 +2556,13 @@ class ClaimController extends Controller
     {
         $claim = Claim::findOrFail($id);
         $damageResults = json_decode($claim->damage_result, true);
-        
+
         //07-feb-2025 add by tanuja
         $damageResultsAll = json_decode($claim->all_damage_result, true);
         $damageTableResult = $damageResultsAll['damageTableData'] ?? [];
         $labourTableResult = $damageResultsAll['labourTableData'] ?? [];
         $summaryTableResult = $damageResultsAll['summaryTableData'] ?? [];
-        
+
         $latestVehicleDetails = VehicleRegistration::where('claim_id', $id)
             ->orderBy('created_at', 'desc')
             ->first();
@@ -2529,7 +2578,7 @@ class ClaimController extends Controller
             $registrationDate = new \Carbon\Carbon($latestVehicleDetails->registration_date);
             $currentDate = \Carbon\Carbon::now();
             $vehicleAgeInYears = $registrationDate->diffInMonths($currentDate) / 12; // Age in years
-        
+
             // Get the depreciation percentage based on the vehicle's age
             $depreciationRecord = \DB::table('vehicle_depreciation')
                 ->where('vehicle_age', '<=', $vehicleAgeInYears)
@@ -2543,7 +2592,7 @@ class ClaimController extends Controller
         }
         // Check if zero_dep is not empty and is set to "Yes"
         if (!empty($latestInsuranceDetails->zero_dep) && $latestInsuranceDetails->zero_dep === "Yes") {
-        $depreciationPercentage = 0; // Set depreciation to 0 if zero_dep is "Yes"
+            $depreciationPercentage = 0; // Set depreciation to 0 if zero_dep is "Yes"
         }
         $gst = Gst::first();
 
@@ -2566,7 +2615,7 @@ class ClaimController extends Controller
         ];
 
         // Generate the main report
-        $mpdf = new \Mpdf\Mpdf();
+        $mpdf = new \Mpdf\Mpdf(['allow_output_buffering' => true]);
         $html = view('claim.report', $data)->render();
         $mpdf->WriteHTML($html);
 
@@ -2583,14 +2632,14 @@ class ClaimController extends Controller
         $this->mergeImagesIntoPDF($mpdf, json_decode($claim->photo_files, true), 'vehicle', 'Vehicle Photos', 6, true, $id);
         $this->mergeImagesIntoPDF($mpdf, json_decode($claim->under_repair_photo_files, true), 'under_repair', 'Under Repair Photos', 6, true, $id);
         $this->mergeImagesIntoPDF($mpdf, json_decode($claim->final_photo_files, true), 'final', 'Final Photos', 6, true, $id);
-        $this->mergeImagesIntoPDF($mpdf, json_decode($claim->processed_image_files), 'processed_image', 'Processed Images', 6,$id);
+        $this->mergeImagesIntoPDF($mpdf, json_decode($claim->processed_image_files), 'processed_image', 'Processed Images', 6, $id);
 
         // Save the main report to a unique temporary file
         $uniqueId = uniqid();
         $mainReportPath = storage_path("temp/main_report_{$uniqueId}.pdf");
         $mpdf->Output($mainReportPath, \Mpdf\Output\Destination::FILE);
 
-        dd("hhh");
+        // dd("hhh");
         // List of PDF files to merge
         $pdfFiles = [$mainReportPath];
         $this->addPdfFileToList($pdfFiles, $claim->claim_form_file, 'claimform', $id);
@@ -2599,6 +2648,7 @@ class ClaimController extends Controller
         $this->addPdfFileToList($pdfFiles, $claim->consent_form_file, 'consentform', $id);
         $this->addPdfFileToList($pdfFiles, $claim->insurance_file, 'insurance', $id);
         $this->addPdfFileToList($pdfFiles, $claim->insurance_file, 'paymentreceipt', $id);
+        $this->addPdfFileToList($pdfFiles, $claim->insurance_file, 'bankdetails', $id);
         $this->addPdfFileToList($pdfFiles, $claim->insurance_file, 'finalbill', $id);
 
         // Generate a unique output file
@@ -2617,7 +2667,7 @@ class ClaimController extends Controller
     {
         // Retrieve the vehicle registration details for the claim
         $vehicle = VehicleRegistration::where('claim_id', $claimId)->first();
-        
+
         // Retrieve the insurance details for the claim
         $insurance = InsuranceDetail::where('claim_id', $claimId)->first();
 
@@ -2683,7 +2733,7 @@ class ClaimController extends Controller
         try {
             $validator = Validator::make($request->all(), [
                 'claim_id' => 'required|exists:claims,id',
-                'document_type' => 'required|in:aadhaar,rcbook,pan_card,tax_receipt,sales_invoice,dl,insurance,claimform,claimintimation,consentform,satisfactionvoucher,fir,number_plate,finalbill,paymentreceipt',
+                'document_type' => 'required|in:aadhaar,rcbook,pan_card,tax_receipt,sales_invoice,dl,insurance,claimform,claimintimation,consentform,satisfactionvoucher,fir,number_plate,finalbill,paymentreceipt,bankdetails',
                 'file_to_update' => 'required|string', // filename of the document to be updated
                 'new_file' => 'required|mimes:jpg,jpeg,png,pdf,mp4,webm|max:10240', // 10MB max file size
             ]);
@@ -2704,7 +2754,7 @@ class ClaimController extends Controller
             $existingFiles = json_decode($claim->$updateField ?? '[]', true);
 
             // If it's a single file document type (like insurance), ensure the field is a string, not an array
-            if (in_array($documentType, ['insurance', 'claimform', 'claimintimation', 'satisfactionvoucher', 'consentform', 'fir','finalbill'])) {
+            if (in_array($documentType, ['insurance', 'claimform', 'claimintimation', 'satisfactionvoucher', 'consentform', 'fir', 'finalbill'])) {
                 // Remove the old file from storage
                 $oldFilePath = storage_path('app/public/upload/document/' . $documentType . '/' . $fileToUpdate);
                 if (file_exists($oldFilePath)) {
@@ -2799,7 +2849,7 @@ class ClaimController extends Controller
         try {
             $validator = Validator::make($request->all(), [
                 'claim_id' => 'required|exists:claims,id',
-                'document_type' => 'required|in:aadhaar,rcbook,pan_card,tax_receipt,sales_invoice,dl,insurance,claimform,claimintimation,consentform,satisfactionvoucher,fir,number_plate,finalbill,paymentreceipt',
+                'document_type' => 'required|in:aadhaar,rcbook,pan_card,tax_receipt,sales_invoice,dl,insurance,claimform,claimintimation,consentform,satisfactionvoucher,fir,number_plate,finalbill,paymentreceipt,bankdetails',
                 'new_file' => 'required|mimes:jpg,jpeg,png,pdf,mp4,webm|max:10240', // 10MB max file size
             ]);
 
@@ -2831,7 +2881,7 @@ class ClaimController extends Controller
             $newFile->move($dir, $fileNameToStore);
 
             // For single-file document types, store the new file directly
-            if (in_array($documentType, ['insurance', 'claimform', 'claimintimation', 'satisfactionvoucher', 'consentform', 'fir','finalbill'])) {
+            if (in_array($documentType, ['insurance', 'claimform', 'claimintimation', 'satisfactionvoucher', 'consentform', 'fir', 'finalbill'])) {
                 $claim->$updateField = $fileNameToStore;
             } else {
                 // For multi-file document types, add the new file to the array
@@ -2864,7 +2914,7 @@ class ClaimController extends Controller
         try {
             $validator = Validator::make($request->all(), [
                 'claim_id' => 'required|exists:claims,id',
-                'document_type' => 'required|in:aadhaar,rcbook,pan_card,tax_receipt,sales_invoice,dl,insurance,claimform,claimintimation,consentform,satisfactionvoucher,fir,number_plate,finalbill,paymentreceipt',
+                'document_type' => 'required|in:aadhaar,rcbook,pan_card,tax_receipt,sales_invoice,dl,insurance,claimform,claimintimation,consentform,satisfactionvoucher,fir,number_plate,finalbill,paymentreceipt,bankdetails',
                 'file_to_delete' => 'required|string', // filename of the document to be deleted
             ]);
 
@@ -2889,11 +2939,11 @@ class ClaimController extends Controller
             }
 
             // For single-file document types, set the field to null
-            if (in_array($documentType, ['insurance', 'claimform', 'claimintimation', 'satisfactionvoucher', 'consentform', 'fir','number_plate','finalbill'])) {
+            if (in_array($documentType, ['insurance', 'claimform', 'claimintimation', 'satisfactionvoucher', 'consentform', 'fir', 'number_plate', 'finalbill'])) {
                 $claim->$updateField = null;
             } else {
                 // For multi-file document types, remove the file from the array
-                $existingFiles = array_filter($existingFiles, function($file) use ($fileToDelete) {
+                $existingFiles = array_filter($existingFiles, function ($file) use ($fileToDelete) {
                     return $file !== $fileToDelete;
                 });
 

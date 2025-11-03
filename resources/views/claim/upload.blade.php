@@ -1027,6 +1027,44 @@
         </div>
 
         <div class="upload-section">
+            <h2>Bank Details</h2>
+            @if(!empty($claimData[0]['bank_details_files']))
+            @php
+                // Check if it's a JSON string, and decode if necessary
+                if (is_string($claimData[0]['bank_details_files'])) {
+                    $bankDetailsFiles = json_decode($claimData[0]['bank_details_files'], true); // Decode JSON string to array
+                    // If it's not a valid JSON, use explode for comma-separated string
+                    if (json_last_error() !== JSON_ERROR_NONE) {
+                        $bankDetailsFiles = explode(',', $claimData[0]['bank_details_files']);
+                    }
+                } else {
+                    $bankDetailsFiles = $claimData[0]['bank_details_files']; // Already an array
+                }
+                $claimHash = md5($claimId);
+                $folderCode = getFolderCode('bankdetails');
+            @endphp
+            <div id="bankdetails-preview" class="preview-container">
+                    @foreach($bankDetailsFiles as $file)
+                        @php
+                            $filename = $file;
+                            $imageUrl = route('secure.image', [$claimHash, $folderCode, 'null', $filename]);
+                        @endphp
+                        @if (isset($file))
+                            <img src="{{ $imageUrl }}" alt="{{ $filename }}" class="preview-image">
+                        @endif
+                    @endforeach
+            </div>
+            @else
+            <input type="file" id="bankdetails" class="file-input" multiple accept="image/*">
+            <div id="bankdetails-preview" class="preview-container"></div>
+            <button class="upload-btn" data-type="bankdetails">Upload Bank Details</button>
+            @endif
+            <div class="progress">
+                <div class="progress-bar"></div>
+            </div>
+        </div>
+
+        <div class="upload-section">
             <h2>Capture Photos of Damage Vehicle<span style="color: red;">*</span></h2>
             @if (!empty($claimData[0]['photo_files']))
                 <!-- Decode JSON string into an array -->
@@ -1458,6 +1496,7 @@
                 satisfactionvoucher: false,
                 finalbill: false,
                 paymentreceipt: false,
+                bankdetails: false,
                 number_plate: false,
             };
 

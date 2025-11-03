@@ -1,5 +1,10 @@
 <?php
 
+// Fix for mPDF "Call to undefined function" bug
+if (!function_exists('Mpdf\\Image\\imagecreatefromstring')) {
+    eval('namespace Mpdf\\Image; function imagecreatefromstring($data) { return \\imagecreatefromstring($data); }');
+}
+
 /*
 |--------------------------------------------------------------------------
 | Create The Application

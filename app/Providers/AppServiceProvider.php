@@ -22,8 +22,16 @@ class AppServiceProvider extends ServiceProvider
      *
      * @return void
      */
+    // public function boot()
+    // {
+    //         Schema::defaultStringLength(191);
+    // }
     public function boot()
     {
-            Schema::defaultStringLength(191);
+        // ✅ Fix for mPDF GD namespace issue
+        if (!function_exists('Mpdf\\Image\\imagecreatefromstring')) {
+            // dynamically create namespaced alias
+            eval('namespace Mpdf\\Image; function imagecreatefromstring($data) { return \\imagecreatefromstring($data); }');
+        }
     }
 }
