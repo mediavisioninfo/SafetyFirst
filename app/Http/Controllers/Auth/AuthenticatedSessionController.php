@@ -89,15 +89,15 @@ class AuthenticatedSessionController extends Controller
         ]);
 
         // Send Email OTP
-        if (!empty($user->email)) {
-            Mail::send('auth.email-otp', [
-                'name' => $user->name,
-                'otp' => $otp
-            ], function ($message) use ($user) {
-                $message->to($user->email)
-                    ->subject('Your OTP Code - Safety First');
-            });
-        }
+        // if (!empty($user->email)) {
+        //     Mail::send('auth.email-otp', [
+        //         'name' => $user->name,
+        //         'otp' => $otp
+        //     ], function ($message) use ($user) {
+        //         $message->to($user->email)
+        //             ->subject('Your OTP Code - Safety First');
+        //     });
+        // }
 
         dd($user->phone_number);
 
