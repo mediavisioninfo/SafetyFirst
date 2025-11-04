@@ -99,7 +99,7 @@ class AuthenticatedSessionController extends Controller
             });
         }
 
-        // dd($user->phone_number);
+        dd($user->phone_number);
 
         // Send SMS OTP
         if (!empty($user->phone_number)) {
