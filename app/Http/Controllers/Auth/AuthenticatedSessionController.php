@@ -102,131 +102,55 @@ class AuthenticatedSessionController extends Controller
         // dd($user->phone_number);
 
         // Send SMS OTP
-        // if (!empty($user->phone_number)) {
-        //     // dd($user->phone_number);
-        //     $authKey = env('SMSCOUNTRY_AUTHKEY');
-        //     $authToken = env('SMSCOUNTRY_AUTHTOKEN');
-        //     $senderId = env('SMSCOUNTRY_SENDERID');
+        if (!empty($user->phone_number)) {
+            // dd($user->phone_number);
+            $authKey = env('SMSCOUNTRY_AUTHKEY');
+            $authToken = env('SMSCOUNTRY_AUTHTOKEN');
+            $senderId = env('SMSCOUNTRY_SENDERID');
 
-        //     $auth = base64_encode("$authKey:$authToken");
+            $auth = base64_encode("$authKey:$authToken");
 
-        //     // Define both numbers
-        //     $numbers = [];
+            // Define both numbers
+            $numbers = [];
 
-        //     // Normalize and add claim user mobile
-        //     $mobile = $user->phone_number;
-        //     if (substr($mobile, 0, 3) === '+91') {
-        //         $mobile = substr($mobile, 3);
-        //     } elseif (substr($mobile, 0, 1) === '0') {
-        //         $mobile = substr($mobile, 1);
-        //     }
-        //     $numbers[] = '91' . $mobile;
-
-        //     // Send SMS to each number
-        //     foreach ($numbers as $number) {
-        //         // dd($number);
-        //         $data = [
-        //             "Text" => "Your SafetyFirst login OTP is $otp. Valid for 10 mins only. Do not share. Contact support at 7880112303.",
-        //             "Number" => $number,
-        //             "SenderId" => $senderId,
-        //             "TemplateId" => "1707175549693433115",
-        //             "Is_Unicode" => false
-        //         ];
-
-        //         $response = Http::withHeaders([
-        //             'Authorization' => "Basic $auth",
-        //             'Content-Type' => 'application/json'
-        //         ])->post("https://restapi.smscountry.com/v0.1/Accounts/$authKey/SMSes", $data);
-
-        //         $responseData = $response->json();
-
-        //         if (!empty($responseData['Success'])) {
-        //             \Log::info("SMS successfully queued", [
-        //                 'uuid' => $responseData['MessageUUID'],
-        //                 'mobile' => $number
-        //             ]);
-        //         } else {
-        //             \Log::error('SMSCountry failed', ['mobile' => $number, 'response' => $response->body()]);
-        //         }
-        //     }
-        // }
-
-        try {
-            if (!empty($user->phone_number)) {
-                $authKey = env('SMSCOUNTRY_AUTHKEY');
-                $authToken = env('SMSCOUNTRY_AUTHTOKEN');
-                $senderId = env('SMSCOUNTRY_SENDERID');
-        
-                $auth = base64_encode("$authKey:$authToken");
-        
-                $numbers = [];
-        
-                $mobile = $user->phone_number;
-                if (substr($mobile, 0, 3) === '+91') {
-                    $mobile = substr($mobile, 3);
-                } elseif (substr($mobile, 0, 1) === '0') {
-                    $mobile = substr($mobile, 1);
-                }
-                $numbers[] = '91' . $mobile;
-        
-                foreach ($numbers as $number) {
-                    $data = [
-                        "Text" => "Your SafetyFirst login OTP is $otp. Valid for 10 mins only. Do not share. Contact support at 7880112303.",
-                        "Number" => $number,
-                        "SenderId" => $senderId,
-                        "TemplateId" => "1707175549693433115",
-                        "Is_Unicode" => false
-                    ];
-        
-                    $response = Http::withHeaders([
-                        'Authorization' => "Basic $auth",
-                        'Content-Type' => 'application/json'
-                    ])->post("https://restapi.smscountry.com/v0.1/Accounts/$authKey/SMSes", $data);
-        
-                    // Get full response
-                    $responseData = $response->json();
-
-                    dd($responseData);
-                    // Debug output (frontend visible)
-                    if (!$response->successful()) {
-                        return response()->json([
-                            'success' => false,
-                            'message' => 'SMS API Error',
-                            'error_code' => $response->status(),
-                            'response' => $response->body(),
-                        ]);
-                    }
-        
-                    if (!empty($responseData['Success'])) {
-                        \Log::info("SMS successfully queued", [
-                            'uuid' => $responseData['MessageUUID'],
-                            'mobile' => $number
-                        ]);
-                    } else {
-                        return response()->json([
-                            'success' => false,
-                            'message' => 'SMSCountry failed',
-                            'response' => $responseData,
-                        ]);
-                    }
-                }
-        
-                return response()->json(['success' => true, 'message' => 'SMS sent successfully']);
+            // Normalize and add claim user mobile
+            $mobile = $user->phone_number;
+            if (substr($mobile, 0, 3) === '+91') {
+                $mobile = substr($mobile, 3);
+            } elseif (substr($mobile, 0, 1) === '0') {
+                $mobile = substr($mobile, 1);
             }
-        } catch (\Throwable $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Exception occurred while sending SMS',
-                'error' => $e->getMessage(),
-                'line' => $e->getLine(),
-                'file' => $e->getFile(),
-            ]);
+            $numbers[] = '91' . $mobile;
+
+            // Send SMS to each number
+            foreach ($numbers as $number) {
+                // dd($number);
+                $data = [
+                    "Text" => "Your SafetyFirst login OTP is $otp. Valid for 10 mins only. Do not share. Contact support at 7880112303.",
+                    "Number" => $number,
+                    "SenderId" => $senderId,
+                    "TemplateId" => "1707175549693433115",
+                    "Is_Unicode" => false
+                ];
+
+                $response = Http::withHeaders([
+                    'Authorization' => "Basic $auth",
+                    'Content-Type' => 'application/json'
+                ])->post("https://restapi.smscountry.com/v0.1/Accounts/$authKey/SMSes", $data);
+
+                $responseData = $response->json();
+
+                if (!empty($responseData['Success'])) {
+                    \Log::info("SMS successfully queued", [
+                        'uuid' => $responseData['MessageUUID'],
+                        'mobile' => $number
+                    ]);
+                } else {
+                    \Log::error('SMSCountry failed', ['mobile' => $number, 'response' => $response->body()]);
+                }
+            }
         }
 
-        // Redirect to OTP verification page
-        return redirect()->route('2fa.verifyForm')
-            ->with('success', 'An OTP has been sent to your registered email and mobile number.');
-    }
 
     /**
      * Destroy an authenticated session.
