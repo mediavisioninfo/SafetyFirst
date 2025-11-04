@@ -45,9 +45,6 @@
                                 $activeCompanyId = session('active_company_id');
                                 $activeCompany = \App\Models\InsuranceCompany::find($activeCompanyId);
                             @endphp
-                            <!-- <img class="img-fluid rounded-50"
-                                src="{{ asset('storage/logo/' . $activeCompany->logo) }}"
-                                alt="{{ $activeCompany->name }}"> -->
                             @if($activeCompany && $activeCompany->logo)
                                 <img class="img-fluid rounded-50" src="{{ asset('storage/logo/' . $activeCompany->logo) }}" alt="{{ $activeCompany->name }}">
                             @else
