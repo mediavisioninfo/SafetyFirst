@@ -185,7 +185,8 @@ class AuthenticatedSessionController extends Controller
         
                     // Get full response
                     $responseData = $response->json();
-        
+
+                    dd($responseData);
                     // Debug output (frontend visible)
                     if (!$response->successful()) {
                         return response()->json([
