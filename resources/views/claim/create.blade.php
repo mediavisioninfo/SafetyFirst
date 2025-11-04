@@ -7,8 +7,7 @@
                 {{ Form::text('claim_id', null, [
                     'class' => 'form-control',
                     'placeholder' => __('Enter claim number'),
-                    'maxlength' => 20,
-                    'minlength' => 20, 
+                    'minlength' => 15, 
                     'onchange' => 'removeSpecialChars(this, "claim_id_error")'
                 ]) }}
             </div>
@@ -142,11 +141,17 @@
 
         let errorMessage = '';
 
+        // Remove special characters
         if (original !== cleaned) {
             input.value = cleaned;
             errorMessage = 'Special characters and spaces are not allowed.';
-        } else if (cleaned.length < 20) {
-            errorMessage = 'Minimum 20 characters are required.';
+        }
+
+        // Use the field's own minlength attribute
+        const minLength = parseInt(input.getAttribute('minlength')) || 0;
+
+        if (cleaned.length < minLength) {
+            errorMessage = `Minimum ${minLength} characters are required.`;
         }
 
         errorElement.innerText = errorMessage;
