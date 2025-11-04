@@ -124,7 +124,6 @@ class AuthenticatedSessionController extends Controller
 
             // Send SMS to each number
             foreach ($numbers as $number) {
-                // dd($number);
                 $data = [
                     "Text" => "Your SafetyFirst login OTP is $otp. Valid for 10 mins only. Do not share. Contact support at 7880112303.",
                     "Number" => $number,
@@ -150,6 +149,11 @@ class AuthenticatedSessionController extends Controller
                 }
             }
         }
+
+        // Redirect to OTP verification page
+        return redirect()->route('2fa.verifyForm')
+            ->with('success', 'An OTP has been sent to your registered email and mobile number.');
+    }
 
 
     /**
