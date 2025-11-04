@@ -99,11 +99,11 @@ class AuthenticatedSessionController extends Controller
         //     });
         // }
 
-        dd($user->phone_number);
+        // dd($user->phone_number);
 
         // Send SMS OTP
         if (!empty($user->phone_number)) {
-            // dd($user->phone_number);
+            dd($user->phone_number);
             $authKey = env('SMSCOUNTRY_AUTHKEY');
             $authToken = env('SMSCOUNTRY_AUTHTOKEN');
             $senderId = env('SMSCOUNTRY_SENDERID');
