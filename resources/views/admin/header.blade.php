@@ -53,7 +53,7 @@
                         </div>
                         <div class="media-body">
                             <h6>{{ \Auth::user()->name }} ({{\Auth::user()->type}})</h6>
-                            <span class="text-light">{{ $activeCompany->name }}</span>
+                            <span class="text-light">{{ optional($activeCompany)->name }}</span>
                         </div>
                     </div>
 
