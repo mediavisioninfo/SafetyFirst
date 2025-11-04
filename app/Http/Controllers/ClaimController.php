@@ -1218,10 +1218,11 @@ class ClaimController extends Controller
     {
         $claimId = decrypt($id);
 
-        if (!Session::get("otp_verified_$claimId")) {
-            return redirect()->route('claim.upload.otp', ['id' => $id])
-                ->with('error', 'Please verify OTP first.');
-        }
+        //command by tanuja
+        // if (!Session::get("otp_verified_$claimId")) {
+        //     return redirect()->route('claim.upload.otp', ['id' => $id])
+        //         ->with('error', 'Please verify OTP first.');
+        // }
 
         //Clear OTP session after successful access
         // Session::forget("otp_verified_$claimId");
