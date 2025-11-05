@@ -2664,7 +2664,7 @@ class ClaimController extends Controller
     }
 
     // Method to handle the recheck action
-    public function checkVehicleInsuranceMatch($claimId)
+    /*public function checkVehicleInsuranceMatch($claimId)
     {
         // Retrieve the vehicle registration details for the claim
         $vehicle = VehicleRegistration::where('claim_id', $claimId)->first();
@@ -2723,6 +2723,71 @@ class ClaimController extends Controller
         }
 
         // If all matches, update the claim notes and return success
+        $claim->notes = 'Vehicle, insurance, and license details match successfully.';
+        $claim->status = 'approved';
+        $claim->save();
+
+        return redirect()->back()->with('success', __('Vehicle and insurance details match.'));
+    }*/
+
+    //this code be added by tanuja (05/11/25)
+    public function checkVehicleInsuranceMatch($claimId)
+    {
+        $claim = Claim::find($claimId);
+        if (!$claim) {
+            return redirect()->back()->with('error', 'Claim not found.');
+        }
+
+        $vehicle   = VehicleRegistration::where('claim_id', $claimId)->first();
+        $insurance = InsuranceDetail::where('claim_id', $claimId)->first();
+        $license   = DlDetail::where('claim_id', $claimId)->first();
+
+        $mismatches = [];
+        $status     = 'approved'; // default
+
+        if ($vehicle && $insurance && $license) {
+
+            // Chassis number mismatch
+            if ($vehicle->vehicle_chasi_number !== $insurance->chassis_no) {
+                $mismatches[] = 'Chassis Number does not match.';
+                $status = 'documents_mismatched';
+            }
+
+            // Engine number mismatch
+            if ($vehicle->vehicle_engine_number !== $insurance->engine_no) {
+                $mismatches[] = 'Engine Number does not match.';
+                $status = 'documents_mismatched';
+            }
+
+            $lossDate = $claim->loss_date;
+
+            // Insurance inactive during loss date
+            if ($insurance->insurance_start_date > $lossDate || $insurance->insurance_expiry_date < $lossDate) {
+                $mismatches[] = 'Insurance is not active at the time of the loss date.';
+                $status = 'rejected';
+            }
+
+            // License expired before loss date
+            if ($license->validity_date < $lossDate) {
+                $mismatches[] = 'Vehicle license has expired before the loss date.';
+                $status = 'rejected';
+            }
+
+        } else {
+            $mismatches[] = 'Vehicle, Insurance, License, or Claim data is missing.';
+            $status = 'rejected';
+        }
+
+        //  Save status and notes
+        if (!empty($mismatches)) {
+            $claim->status = $status;
+            $claim->notes = implode(' | ', $mismatches);
+            $claim->save();
+
+            return redirect()->back()->with('error', implode('<br>', $mismatches));
+        }
+
+        // staus should be update -- approved
         $claim->notes = 'Vehicle, insurance, and license details match successfully.';
         $claim->status = 'approved';
         $claim->save();
