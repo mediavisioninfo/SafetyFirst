@@ -324,10 +324,10 @@ class ClaimController extends Controller
                 // Send SMS to each number
                 foreach ($numbers as $number) {
                     $data = [
-                        "Text" => "Dear ABC, To process your Car insurance claim -Claim No: $request->claim_id, please upload the required documents at: $uploadLink For help, call 080-62965696. Regards SafetyFirst",
+                        "Text" => "Dear Customer, To process your Car insurance Claim No: $request->claim_id, please upload the documents at: $uploadLink For help, call 080-62965696. Team SafetyFirst",
                         "Number" => $number,
                         "SenderId" => $senderId,
-                        "TemplateId" => "1707174703017862364",
+                        "TemplateId" => "1707176225868582491",
                         "Is_Unicode" => false
                     ];
 
@@ -976,10 +976,10 @@ class ClaimController extends Controller
                 // Send SMS to each number
                 foreach ($numbers as $number) {
                     $data = [
-                        "Text" => "Dear ABC, To process your Car insurance claim -Claim No: $request->claim_id, please upload the required documents at: $uploadLink For help, call 080-62965696. Regards SafetyFirst",
+                        "Text" => "Dear Customer, To process your Car insurance Claim No: $request->claim_id, please upload the documents at: $uploadLink For help, call 080-62965696. Team SafetyFirst",
                         "Number" => $number,
                         "SenderId" => $senderId,
-                        "TemplateId" => "1707174703017862364",
+                        "TemplateId" => "1707176225868582491",
                         "Is_Unicode" => false
                     ];
 
