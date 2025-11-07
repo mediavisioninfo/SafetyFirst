@@ -38,7 +38,7 @@
         </div>
 
         <div class="form-group col-md-6 col-lg-6">
-            {{Form::label('location',__('Location'),array('class'=>'form-label'))}}
+            {{Form::label('location',__('Place of Accident'),array('class'=>'form-label'))}}
             {{Form::text('location',null,array('class'=>'form-control','placeholder'=>__('Enter location')))}}
         </div>
 
@@ -85,8 +85,8 @@
             ]) }}
         </div>
         <div class="form-group col-md-6 col-lg-6">
-            {{Form::label('claim_amount',__('Claim Amount'),array('class'=>'form-label'))}}
-            {{Form::number('claim_amount',null,array('class'=>'form-control','placeholder'=>__('Enter claim amount')))}}
+            {{Form::label('claim_amount',__('Estimate Amount'),array('class'=>'form-label'))}}
+            {{Form::number('claim_amount',null,array('class'=>'form-control','placeholder'=>__('Enter claim estimate amount')))}}
         </div>
         
         <div class="form-group col-md-6 col-lg-6">

@@ -611,6 +611,7 @@ if (!function_exists('userLoggedHistory')) {
                 'under_repair'        => 'URP',
                 'final'               => 'FIP',
                 'bankdetails'         => 'BDF',
+                'estimatefile'        => 'EMF',
                 'send_mail'           => 'EML',
             ];
 

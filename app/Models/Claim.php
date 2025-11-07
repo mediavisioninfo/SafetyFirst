@@ -27,7 +27,10 @@ class Claim extends Model
         'ensurance_email',            
         'final_bill_files',            
         'payment_receipt_files',         
-        'bank_details_files',         
+        'bank_details_files', 
+        'bill_date',
+        'bill_amount',
+        'bill_number',        
     ];
 
     public static $status = [

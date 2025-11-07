@@ -13,12 +13,14 @@
             </td>
             <td></td>
             <td></td>
-            <td></td>
             <td colspan="1" style="font-weight: bold; text-align: left; font-size: 14px;">
-                 BILL DATE:  {{ $claim->date }}
+                 BILL DATE:  {{ $claim->bill_date }}
             </td>
             <td colspan="1" style="font-weight: bold; text-align: left; font-size: 14px;">
-                BILL AMOUNT:
+                BILL AMOUNT: {{ $claim->bill_amount}}
+            </td>
+            <td colspan="1" style="font-weight: bold; text-align: left; font-size: 14px;">
+                BILL Number: {{ $claim->bill_number}}
             </td>
         </tr>
         <tr>
@@ -174,11 +176,11 @@
                 <td style="border: 1px solid black;"></td>
             </tr>
             <tr>
+                <td style="border: 1px solid black;"></td>
+                <td style="border: 1px solid black;"></td>
+                <td style="border: 1px solid black;"></td>
                 <td style="border: 1px solid black;">Less Excess (-) :</td>
                 <td style="border: 1px solid black; text-align: right;">{{ $summaryTableResult['lessExcess'] ?? 0 }}</td>
-                <td style="border: 1px solid black;"></td>
-                <td style="border: 1px solid black;"></td>
-                <td style="border: 1px solid black;"></td>
                 <td style="border: 1px solid black;"></td>
             </tr>
             <tr>

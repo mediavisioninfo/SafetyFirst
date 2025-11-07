@@ -19,7 +19,7 @@
                 <img src="{{ $src }}" alt="Safety First Logo" style="width: 150px; height: auto; margin-right: 10px;">   
             </td>
             <td colspan="1" style="font-size: 12px;">
-                <b>Off: 0731-4103236</b>
+                <b>GSTIN: 08ABIFS2643G2Z2</b>
                 <br>
                 <b>Cell off: +91 98930 55855</b>
                 <br>
@@ -39,7 +39,7 @@
             {{-- The logo is inserted via Excel Drawing at A1 --}}
             <td style="width: 40%;"></td>
             <td style="text-align: right; font-size: 12px;">
-                <strong>Off- 0731-4103236</strong><br>
+                <strong>GSTIN: 08ABIFS2643G2Z2</strong><br>
                 <strong>Cell off. +91 98939 55855</strong><br>
                 <strong>+91 7880112494</strong><br>
                 <strong>Toll Free 08062965696 (40 Lines)</strong><br>
@@ -223,7 +223,7 @@
             <td style="border: 1px solid black;">(i) Date And Time of Accident</td>
             <td style="border: 1px solid black;">{{ $claim->loss_date ?? 'NA' }}</td>
             <td style="border: 1px solid black;">(iv) Date of deputation</td>
-            <td style="border: 1px solid black;">NA</td>
+            <td style="border: 1px solid black;">{{ $claim->date }}</td>
         </tr>
         <tr>
             <td style="border: 1px solid black;">(ii) Place of Accident</td>
@@ -247,7 +247,7 @@
             <td style="border: 1px solid black;">(iv) Estimate Date</td>
             <td style="border: 1px solid black;">{{ $claim->date ?? 'NA' }}</td>
             <td style="border: 1px solid black;">(viii) Estimate Amount</td>
-            <td style="border: 1px solid black;">NA</td>
+            <td style="border: 1px solid black;">{{ $claim->claim_amount ?? 'NA' }}</td>
         </tr>
     </table>
     <table style="width: 100%; border-collapse: collapse; border: 1px solid black;">

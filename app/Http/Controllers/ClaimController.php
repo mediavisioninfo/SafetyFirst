@@ -324,10 +324,10 @@ class ClaimController extends Controller
                 // Send SMS to each number
                 foreach ($numbers as $number) {
                     $data = [
-                        "Text" => "Dear Customer, To process your Car insurance Claim No: $request->claim_id, please upload the documents at: $uploadLink For help, call 080-62965696. Team SafetyFirst",
+                        "Text" => "Dear ABC, To process your Car insurance claim -Claim No: $request->claim_id, please upload the required documents at: $uploadLink For help, call 080-62965696. Regards SafetyFirst",
                         "Number" => $number,
                         "SenderId" => $senderId,
-                        "TemplateId" => "1707176225868582491",
+                        "TemplateId" => "1707174703017862364",
                         "Is_Unicode" => false
                     ];
 
@@ -698,6 +698,26 @@ class ClaimController extends Controller
         }
     }
 
+
+    public function updateBillDetails(Request $request, $id)
+    {
+        $claim = Claim::findOrFail($id);
+
+        $request->validate([
+            'bill_date' => 'nullable|date',
+            'bill_amount' => 'nullable|numeric',
+            'bill_number' => 'nullable|string|max:255',
+        ]);
+
+        $claim->bill_date   = $request->bill_date;
+        $claim->bill_amount = $request->bill_amount;
+        $claim->bill_number = $request->bill_number;
+
+        $claim->save();
+
+        return redirect()->back()->with('success', 'Bill details saved successfully.');
+    }
+
     //07-feb-2025 add by tanuja
     // Controller Method to Handle the Data Update
     public function updateAllData(Request $request, $claimId)
@@ -976,10 +996,10 @@ class ClaimController extends Controller
                 // Send SMS to each number
                 foreach ($numbers as $number) {
                     $data = [
-                        "Text" => "Dear Customer, To process your Car insurance Claim No: $request->claim_id, please upload the documents at: $uploadLink For help, call 080-62965696. Team SafetyFirst",
+                        "Text" => "Dear ABC, To process your Car insurance claim -Claim No: $request->claim_id, please upload the required documents at: $uploadLink For help, call 080-62965696. Regards SafetyFirst",
                         "Number" => $number,
                         "SenderId" => $senderId,
-                        "TemplateId" => "1707176225868582491",
+                        "TemplateId" => "1707174703017862364",
                         "Is_Unicode" => false
                     ];
 
@@ -1218,7 +1238,6 @@ class ClaimController extends Controller
     {
         $claimId = decrypt($id);
 
-        //command by tanuja
         // if (!Session::get("otp_verified_$claimId")) {
         //     return redirect()->route('claim.upload.otp', ['id' => $id])
         //         ->with('error', 'Please verify OTP first.');
@@ -1278,6 +1297,7 @@ class ClaimController extends Controller
                 'number_plate',
                 'paymentreceipt',
                 'bankdetails',
+                'estimatefile',
                 'under_repair',
                 'final'
             ];
@@ -1568,6 +1588,7 @@ class ClaimController extends Controller
             'fir' => 'FRC',
             'paymentreceipt' => 'PYR',
             'bankdetails' => 'BDF',
+            'estimatefile' => 'EMF',
             'finalbill' => 'FBL',
             'video' => 'VDX',
             'send_mail' => 'EML',
@@ -1844,6 +1865,7 @@ class ClaimController extends Controller
             'fir' => 'fir_file',
             'paymentreceipt' => 'payment_receipt_files',
             'bankdetails' => 'bank_details_files',
+            'estimatefile' => 'estimate_files',
         ];
         return $fieldMap[$documentType] ?? null;
     }
@@ -2730,7 +2752,6 @@ class ClaimController extends Controller
         return redirect()->back()->with('success', __('Vehicle and insurance details match.'));
     }*/
 
-    //this code be added by tanuja (05/11/25)
     public function checkVehicleInsuranceMatch($claimId)
     {
         $claim = Claim::find($claimId);
@@ -2794,12 +2815,14 @@ class ClaimController extends Controller
 
         return redirect()->back()->with('success', __('Vehicle and insurance details match.'));
     }
+
+
     public function updateDocument(Request $request)
     {
         try {
             $validator = Validator::make($request->all(), [
                 'claim_id' => 'required|exists:claims,id',
-                'document_type' => 'required|in:aadhaar,rcbook,pan_card,tax_receipt,sales_invoice,dl,insurance,claimform,claimintimation,consentform,satisfactionvoucher,fir,number_plate,finalbill,paymentreceipt,bankdetails',
+                'document_type' => 'required|in:aadhaar,rcbook,pan_card,tax_receipt,sales_invoice,dl,insurance,claimform,claimintimation,consentform,satisfactionvoucher,fir,number_plate,finalbill,paymentreceipt,bankdetails,estimatefile',
                 'file_to_update' => 'required|string', // filename of the document to be updated
                 'new_file' => 'required|mimes:jpg,jpeg,png,pdf,mp4,webm|max:10240', // 10MB max file size
             ]);
@@ -2915,7 +2938,7 @@ class ClaimController extends Controller
         try {
             $validator = Validator::make($request->all(), [
                 'claim_id' => 'required|exists:claims,id',
-                'document_type' => 'required|in:aadhaar,rcbook,pan_card,tax_receipt,sales_invoice,dl,insurance,claimform,claimintimation,consentform,satisfactionvoucher,fir,number_plate,finalbill,paymentreceipt,bankdetails',
+                'document_type' => 'required|in:aadhaar,rcbook,pan_card,tax_receipt,sales_invoice,dl,insurance,claimform,claimintimation,consentform,satisfactionvoucher,fir,number_plate,finalbill,paymentreceipt,bankdetails,estimatefile',
                 'new_file' => 'required|mimes:jpg,jpeg,png,pdf,mp4,webm|max:10240', // 10MB max file size
             ]);
 
@@ -2980,7 +3003,7 @@ class ClaimController extends Controller
         try {
             $validator = Validator::make($request->all(), [
                 'claim_id' => 'required|exists:claims,id',
-                'document_type' => 'required|in:aadhaar,rcbook,pan_card,tax_receipt,sales_invoice,dl,insurance,claimform,claimintimation,consentform,satisfactionvoucher,fir,number_plate,finalbill,paymentreceipt,bankdetails',
+                'document_type' => 'required|in:aadhaar,rcbook,pan_card,tax_receipt,sales_invoice,dl,insurance,claimform,claimintimation,consentform,satisfactionvoucher,fir,number_plate,finalbill,paymentreceipt,bankdetails,estimatefile',
                 'file_to_delete' => 'required|string', // filename of the document to be deleted
             ]);
 

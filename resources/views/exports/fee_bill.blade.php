@@ -20,7 +20,7 @@
                 <img src="{{ $src }}" alt="Safety First Logo" style="width: 150px; height: auto; margin-right: 10px;">   
             </td>
             <td colspan="1" style="font-size: 12px;">
-                <b>Off: 0731-4103236</b>
+                 <b>GSTIN: 08ABIFS2643G2Z2</b>
                 <br>
                 <b>Cell off: +91 98930 55855</b>
                 <br>
@@ -40,7 +40,7 @@
             {{-- The logo is inserted via Excel Drawing at A1 --}}
             <td style="width: 40%;"></td>
             <td style="text-align: right; font-size: 12px;">
-                <strong>Off- 0731-4103236</strong><br>
+                <strong>GSTIN: 08ABIFS2643G2Z2</strong><br>
                 <strong>Cell off. +91 98939 55855</strong><br>
                 <strong>+91 7880112494</strong><br>
                 <strong>Toll Free 08062965696 (40 Lines)</strong><br>

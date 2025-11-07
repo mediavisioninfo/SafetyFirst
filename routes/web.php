@@ -327,6 +327,7 @@ Route::get('/get-cities/{state}', [ClaimController::class, 'getCities']);
 
 Route::get('/secure-image/{claimHash}/{folderHash}/{folderCode}/{filename}', [ClaimController::class, 'showImage'])->name('secure.image');
 
+Route::post('/claim/{id}/bill-details', [ClaimController::class, 'updateBillDetails'])->name('claim.updateBillDetails');
 
 Route::post('/upload-document', [ClaimController::class, 'uploadDocument'])->name('upload.document');
 Route::get('/claim/report/{id}', [ClaimController::class, 'generateReport'])->name('claim.report');

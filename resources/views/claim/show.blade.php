@@ -1296,6 +1296,7 @@
                                                         $finalBillFiles = $claim->final_bill_files;
                                                         $paymentRecepitFiles = json_decode($claim->payment_receipt_files, true) ?? [];
                                                         $bankDetailsFiles = json_decode($claim->bank_details_files, true) ?? [];
+                                                        $estimateFiles = json_decode($claim->estimate_files, true) ?? [];
                                                     @endphp
                                                     {{-- number Plate Files --}}
                                                     <tr>
@@ -2334,6 +2335,85 @@
                                                             @endif
                                                         </td>
                                                     </tr>
+                                                    <tr>
+                                                        <td>Estimate Files</td>
+                                                        <td>
+                                                            @if (!empty($estimateFiles))
+                                                                <span style="color: green;">&#x2714;</span> Available
+                                                                ({{ count($estimateFiles) }} file(s))
+                                                            @else
+                                                                <span style="color: red;">&#x2716;</span> Pending Document
+                                                            @endif
+                                                        </td>
+                                                        <td>
+                                                            @if (!empty($estimateFiles))
+                                                                @php
+                                                                    $claimHash = md5($claim->id);
+                                                                    $folderCode = getFolderCode('estimatefile');
+                                                                @endphp
+
+                                                                @foreach ($estimateFiles as $estimatefile)
+                                                                    @php
+                                                                        $filename = $estimatefile;
+                                                                        $imageUrl = route('secure.image', [$claimHash, $folderCode, 'null', $filename]);
+                                                                    @endphp
+
+                                                                    <div class="d-flex align-items-center mb-2">
+                                                                        <!-- View Icon -->
+                                                                        <a href="{{ $imageUrl }}"
+                                                                            target="_blank"
+                                                                            class="text-warning"
+                                                                            data-bs-toggle="tooltip"
+                                                                            data-bs-original-title="View">
+                                                                            <i data-feather="eye"></i>
+                                                                        </a>
+
+                                                                        <!-- Update Icon -->
+                                                                        <input type="file"
+                                                                            class="form-control form-control-sm d-none"
+                                                                            id="estimatefile-update-{{ $estimatefile }}"
+                                                                            data-document-type="estimatefile"
+                                                                            data-file-to-update="{{ $estimatefile }}"
+                                                                            accept=".jpg,.jpeg,.png,.pdf"
+                                                                            onchange="updateDocument(this)">
+                                                                        <a href="javascript:void(0);"
+                                                                            class="text-success ms-2"
+                                                                            onclick="document.getElementById('estimatefile-update-{{ $estimatefile }}').click()"
+                                                                            data-bs-toggle="tooltip"
+                                                                            data-bs-original-title="Edit">
+                                                                            <i data-feather="edit"></i>
+                                                                        </a>
+
+                                                                        <!-- Delete Icon -->
+                                                                        <a href="javascript:void(0);"
+                                                                            class="text-danger ms-2"
+                                                                            onclick="deleteDocument('estimatefile', '{{ $estimatefile }}')"
+                                                                            data-bs-toggle="tooltip"
+                                                                            data-bs-original-title="Delete">
+                                                                            <i data-feather="trash-2"></i>
+                                                                        </a>
+                                                                    </div>
+                                                                @endforeach
+                                                                <!-- Add More Documents -->
+                                                                <a href="javascript:void(0);"
+                                                                    class="text-primary mt-2"
+                                                                    onclick="addMoreDocuments('estimatefile')"
+                                                                    data-bs-toggle="tooltip"
+                                                                    data-bs-original-title="Add More">
+                                                                    <i class="ti-plus"></i>
+                                                                </a>
+                                                            @else
+                                                                <!-- Upload Icon -->
+                                                                <a href="javascript:void(0);"
+                                                                    class="text-primary"
+                                                                    onclick="addMoreDocuments('estimatefile')"
+                                                                    data-bs-toggle="tooltip"
+                                                                    data-bs-original-title="Upload">
+                                                                    <i data-feather="upload"></i>
+                                                                </a>
+                                                            @endif
+                                                        </td>
+                                                    </tr>
                                                 </tbody>
                                             </table>
                                         </div>
@@ -2668,6 +2748,49 @@
                                     @endif
                                     <br>
                                     <br>
+                                    <form action="{{ route('claim.updateBillDetails', $claim->id) }}" method="POST">
+                                        @csrf
+                                        @method('POST')
+
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="bill_date">Bill Date</label>
+                                                    <input type="date"
+                                                        class="form-control"
+                                                        id="bill_date"
+                                                        name="bill_date"
+                                                        value="{{ old('bill_date', $claim->bill_date ? \Carbon\Carbon::parse($claim->bill_date)->format('Y-m-d') : '') }}">
+                                                </div>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="bill_amount">Bill Amount</label>
+                                                    <input type="text" class="form-control"
+                                                        id="bill_amount"
+                                                        name="bill_amount"
+                                                        value="{{ old('bill_amount', $claim->bill_amount) }}">
+                                                </div>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="bill_number">Bill Number</label>
+                                                    <input type="text" class="form-control"
+                                                        id="bill_number"
+                                                        name="bill_number"
+                                                        value="{{ old('bill_number', $claim->bill_number) }}">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="mt-3 text-end">
+                                            <button type="submit" class="btn btn-primary">
+                                                Save Bill Details
+                                            </button>
+                                        </div>
+                                    </form>
                                     <br>
                                     <!-- Download button: -->
                                     <div class="form-group mt-2 d-flex justify-content-end">
@@ -3233,7 +3356,7 @@ function downloadSectionAsPDF(button) {
     text-align: center;
     font-family: Arial, sans-serif;
     font-size: 20px;
-    margin: 0 0 10px 0;           /* no top-margin, small bottom margin */
+    margin: 0 0 5px 0;           /* no top-margin, small bottom margin */
     page-break-after: avoid;       /* <=== prevent break right after */
   `;
   clone.insertBefore(heading, clone.firstChild);
@@ -3244,47 +3367,77 @@ function downloadSectionAsPDF(button) {
 
   // 3) Inject PDF-specific CSS including our no-break utility
   const style = document.createElement('style');
-  style.textContent = `
+    style.textContent = `
     @page {
-      size: A4;
-      margin: 10mm;
+        size: A4;
+        margin: 8mm;
     }
-    /* Utility to forbid breaks inside */
+
     .no-break { page-break-inside: avoid; }
+
     body, #${targetId} {
-      font-family: Arial, sans-serif;
-      font-size: 12px;
-      color: #333;
-      width: 100%;
-      box-sizing: border-box;
-      margin: 0; padding: 0;
+        font-family: Arial, sans-serif !important;
+        font-size: 11px !important;
+        padding: 0 !important;
+        margin: 0 !important;
     }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 8px;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 6px;
-    }
-    .form-control {
-      width: 100%;
-      padding: 5px;
-      box-sizing: border-box;
-      border: 1px solid #ccc;
-    }
+
+    /* ------------------------------
+        ✅ GRID COMPRESSION
+    ------------------------------ */
     .row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 8px;
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 3px !important;               /* ✅ small spacing between grid */
+        margin-bottom: 3px !important;     /* ✅ reduce bottom margin */
     }
-    .col-md-6 { flex: 1 1 48%; }
-    .col-md-4 { flex: 1 1 30%; }
-    .col-md-12 { flex: 1 1 100%; }
-  `;
-  clone.insertBefore(style, clone.firstChild);
+
+    /* Make columns more compact */
+    .col-md-6 { flex: 0 0 48% !important; max-width: 48% !important; }
+    .col-md-4 { flex: 0 0 31% !important; max-width: 31% !important; }
+    .col-md-12 { flex: 0 0 100% !important; max-width: 100% !important; }
+
+    /* ------------------------------
+        ✅ FORM FIELDS COMPRESSION
+    ------------------------------ */
+    .form-control {
+        font-size: 10px !important;
+        padding: 2px 4px !important;      /* ✅ smaller input height */
+        height: auto !important;
+        border: 1px solid #999 !important;
+        margin-bottom: 2px !important;
+    }
+
+    label {
+        font-size: 10px !important;
+        margin-bottom: 1px !important;     /* ✅ smaller label spacing */
+    }
+
+    /* ------------------------------
+        ✅ TABLE COMPRESSION
+    ------------------------------ */
+    table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        margin-top: 4px !important;
+    }
+
+    th, td {
+        border: 1px solid #aaa !important;
+        padding: 3px !important;           /* ✅ smaller cell padding */
+        font-size: 10px !important;
+    }
+
+    /* ------------------------------
+        ✅ TITLE SMALLER
+    ------------------------------ */
+    h2 {
+        font-size: 16px !important;
+        margin: 0 0 6px 0 !important;
+        text-align: center !important;
+    }
+    `;
+    clone.insertBefore(style, clone.firstChild);
 
   // 4) Generate the PDF
   html2pdf().set({

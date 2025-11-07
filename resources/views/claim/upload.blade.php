@@ -1065,6 +1065,50 @@
         </div>
 
         <div class="upload-section">
+            <h2>Estimate</h2>
+            @if(!empty($claimData[0]['estimate_files']))
+            @php
+                // Check if it's a JSON string, and decode if necessary
+                if (is_string($claimData[0]['estimate_files'])) {
+                    $estimateFiles = json_decode($claimData[0]['estimate_files'], true); // Decode JSON string to array
+                    // If it's not a valid JSON, use explode for comma-separated string
+                    if (json_last_error() !== JSON_ERROR_NONE) {
+                        $estimateFiles = explode(',', $claimData[0]['estimate_files']);
+                    }
+                } else {
+                    $estimateFiles = $claimData[0]['estimate_files']; // Already an array
+                }
+                $claimHash = md5($claimId);
+                $folderCode = getFolderCode('estimatefile');
+            @endphp
+            <div id="estimatefile-preview" class="preview-container">
+                    @foreach($estimateFiles as $file)
+                        @php
+                            $filename = $file;
+                            $imageUrl = route('secure.image', [$claimHash, $folderCode, 'null', $filename]);
+                            $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+                        @endphp
+                        @if ($extension === 'pdf')
+                             <a href="{{ $imageUrl }}" target="_blank">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/8/87/PDF_file_icon.svg" alt="PDF Preview" width="100" height="120">
+                                <p>View Full PDF</p>
+                            </a>
+                        @else
+                            <img src="{{ $imageUrl }}" alt="{{ $filename }}" class="preview-image">
+                        @endif
+                    @endforeach
+            </div>
+            @else
+            <input type="file" id="estimatefile" class="file-input" multiple accept="image/*,application/pdf">
+            <div id="estimatefile-preview" class="preview-container"></div>
+            <button class="upload-btn" data-type="estimatefile">Upload Estimate Details</button>
+            @endif
+            <div class="progress">
+                <div class="progress-bar"></div>
+            </div>
+        </div>
+
+        <div class="upload-section">
             <h2>Capture Photos of Damage Vehicle<span style="color: red;">*</span></h2>
             @if (!empty($claimData[0]['photo_files']))
                 <!-- Decode JSON string into an array -->
@@ -1497,6 +1541,7 @@
                 finalbill: false,
                 paymentreceipt: false,
                 bankdetails: false,
+                estimatefile: false,
                 number_plate: false,
             };
 
@@ -1612,12 +1657,12 @@
                 const previewContainer = $(`#${previewId}`);
                 previewContainer.html('');
 
-                const maxSize = 1024 * 1024; // 1 MB
+                const maxSize = 3 * 1024 * 1024; // ✅ 3 MB
 
                 $.each(files, function(index, file) {
                     if (file.size > maxSize) {
                         alert(
-                            `File "${file.name}" is larger than 1 MB. Please choose a smaller file.`
+                            `File "${file.name}" is larger than 3 MB. Please choose a smaller file.`
                         );
                         return;
                     }
@@ -1625,11 +1670,13 @@
                     const reader = new FileReader();
                     reader.onload = function(e) {
                         const previewItem = $('<div class="preview-item"></div>');
+
                         if (file.type.startsWith('image/')) {
                             previewItem.append(`<img src="${e.target.result}" alt="Preview">`);
                         } else if (file.type === 'application/pdf') {
                             previewItem.append('<i class="fas fa-file-pdf fa-3x"></i>');
                         }
+
                         previewItem.append('<button class="remove-btn">&times;</button>');
                         previewContainer.append(previewItem);
                     };
