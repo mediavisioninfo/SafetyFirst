@@ -2817,174 +2817,269 @@ class ClaimController extends Controller
     }
 
 
+    // public function updateDocument(Request $request)
+    // {
+    //     try {
+    //         $validator = Validator::make($request->all(), [
+    //             'claim_id' => 'required|exists:claims,id',
+    //             'document_type' => 'required|in:aadhaar,rcbook,pan_card,tax_receipt,sales_invoice,dl,insurance,claimform,claimintimation,consentform,satisfactionvoucher,fir,number_plate,finalbill,paymentreceipt,bankdetails,estimatefile',
+    //             'file_to_update' => 'required|string', // filename of the document to be updated
+    //             'new_file' => 'required|mimes:jpg,jpeg,png,pdf,mp4,webm|max:10240', // 10MB max file size
+    //         ]);
+
+    //         if ($validator->fails()) {
+    //             return response()->json(['error' => $validator->errors()], 400);
+    //         }
+
+    //         $claim = Claim::findOrFail($request->input('claim_id'));
+    //         $documentType = $request->input('document_type');
+    //         $fileToUpdate = $request->input('file_to_update');
+    //         $newFile = $request->file('new_file');
+
+    //         // Get the appropriate field based on document type
+    //         $updateField = $this->getUpdateField($documentType);
+
+    //         // Retrieve existing files (if any)
+    //         $existingFiles = json_decode($claim->$updateField ?? '[]', true);
+
+    //         // If it's a single file document type (like insurance), ensure the field is a string, not an array
+    //         if (in_array($documentType, ['insurance', 'claimform', 'claimintimation', 'satisfactionvoucher', 'consentform', 'fir', 'finalbill'])) {
+    //             // Remove the old file from storage
+    //             $oldFilePath = storage_path('app/public/upload/document/' . $documentType . '/' . $fileToUpdate);
+    //             if (file_exists($oldFilePath)) {
+    //                 unlink($oldFilePath);
+    //             }
+
+    //             // Upload the new file
+    //             $filenameWithExt = $newFile->getClientOriginalName();
+    //             $filename = pathinfo($filenameWithExt, PATHINFO_FILENAME);
+    //             $extension = $newFile->getClientOriginalExtension();
+    //             $fileNameToStore = $filename . '_' . time() . '.' . $extension;
+    //             $dir = storage_path('app/public/upload/document/' . $documentType);
+
+    //             if (!file_exists($dir)) {
+    //                 mkdir($dir, 0777, true);
+    //             }
+
+    //             $newFile->move($dir, $fileNameToStore);
+
+    //             // Update the document field with the new file
+    //             $claim->$updateField = $fileNameToStore;
+    //         } else {
+    //             // For multi-file document types, replace the file in the array
+    //             $key = array_search($fileToUpdate, $existingFiles);
+    //             if ($key !== false) {
+    //                 // Remove the old file from storage
+    //                 $oldFilePath = storage_path('app/public/upload/document/' . $documentType . '/' . $fileToUpdate);
+    //                 if (file_exists($oldFilePath)) {
+    //                     unlink($oldFilePath);
+    //                 }
+
+    //                 // Upload the new file
+    //                 $filenameWithExt = $newFile->getClientOriginalName();
+    //                 $filename = pathinfo($filenameWithExt, PATHINFO_FILENAME);
+    //                 $extension = $newFile->getClientOriginalExtension();
+    //                 $fileNameToStore = $filename . '_' . time() . '.' . $extension;
+    //                 $dir = storage_path('app/public/upload/document/' . $documentType);
+
+    //                 if (!file_exists($dir)) {
+    //                     mkdir($dir, 0777, true);
+    //                 }
+
+    //                 $newFile->move($dir, $fileNameToStore);
+
+    //                 // Update the array with the new file
+    //                 $existingFiles[$key] = $fileNameToStore;
+    //             } else {
+    //                 // For single file document types, or when file is not found in array, treat as new file
+    //                 $filenameWithExt = $newFile->getClientOriginalName();
+    //                 $filename = pathinfo($filenameWithExt, PATHINFO_FILENAME);
+    //                 $extension = $newFile->getClientOriginalExtension();
+    //                 $fileNameToStore = $filename . '_' . time() . '.' . $extension;
+    //                 $dir = storage_path('app/public/upload/document/' . $documentType);
+
+    //                 if (!file_exists($dir)) {
+    //                     mkdir($dir, 0777, true);
+    //                 }
+
+    //                 $newFile->move($dir, $fileNameToStore);
+
+    //                 // Add new file to array
+    //                 $existingFiles[] = $fileNameToStore;
+    //             }
+
+    //             // Update the document field with the new files (as an array)
+    //             $claim->$updateField = json_encode($existingFiles);
+    //         }
+
+    //         // Save the updated claim
+    //         $claim->save();
+
+    //         // Log the action
+    //         $this->logClaimAction(
+    //             $claim,
+    //             'document_update',
+    //             'Document updated via customer portal: ' . $documentType,
+    //             null,
+    //             ['document_type' => $documentType, 'old_file' => $fileToUpdate, 'new_file' => $fileNameToStore]
+    //         );
+
+    //         return response()->json([
+    //             'message' => 'Document updated successfully',
+    //             'new_file' => $fileNameToStore
+    //         ]);
+    //     } catch (\Exception $e) {
+    //         Log::error('Document update error: ' . $e->getMessage());
+    //         return response()->json(['error' => 'An error occurred during document update'], 500);
+    //     }
+    // }
+
+
     public function updateDocument(Request $request)
     {
         try {
             $validator = Validator::make($request->all(), [
                 'claim_id' => 'required|exists:claims,id',
                 'document_type' => 'required|in:aadhaar,rcbook,pan_card,tax_receipt,sales_invoice,dl,insurance,claimform,claimintimation,consentform,satisfactionvoucher,fir,number_plate,finalbill,paymentreceipt,bankdetails,estimatefile',
-                'file_to_update' => 'required|string', // filename of the document to be updated
-                'new_file' => 'required|mimes:jpg,jpeg,png,pdf,mp4,webm|max:10240', // 10MB max file size
+                'file_to_update' => 'required|string',
+                'new_file' => 'required|mimes:jpg,jpeg,png,pdf,mp4,webm|max:10240',
             ]);
 
             if ($validator->fails()) {
                 return response()->json(['error' => $validator->errors()], 400);
             }
 
-            $claim = Claim::findOrFail($request->input('claim_id'));
-            $documentType = $request->input('document_type');
-            $fileToUpdate = $request->input('file_to_update');
+            $claim = Claim::findOrFail($request->claim_id);
+            $documentType = $request->document_type;
+            $fileToUpdate = $request->file_to_update;
             $newFile = $request->file('new_file');
 
-            // Get the appropriate field based on document type
             $updateField = $this->getUpdateField($documentType);
 
-            // Retrieve existing files (if any)
             $existingFiles = json_decode($claim->$updateField ?? '[]', true);
+            if (!is_array($existingFiles)) {
+                $existingFiles = [$existingFiles];
+            }
 
-            // If it's a single file document type (like insurance), ensure the field is a string, not an array
-            if (in_array($documentType, ['insurance', 'claimform', 'claimintimation', 'satisfactionvoucher', 'consentform', 'fir', 'finalbill'])) {
-                // Remove the old file from storage
-                $oldFilePath = storage_path('app/public/upload/document/' . $documentType . '/' . $fileToUpdate);
-                if (file_exists($oldFilePath)) {
-                    unlink($oldFilePath);
-                }
+            $claimHash = md5($claim->id);
+            $folderCode = $this->getFolderCode($documentType);
+            $dir = config('constant.claim_upload_path') . "/$claimHash/{$folderCode}";
 
-                // Upload the new file
-                $filenameWithExt = $newFile->getClientOriginalName();
-                $filename = pathinfo($filenameWithExt, PATHINFO_FILENAME);
-                $extension = $newFile->getClientOriginalExtension();
-                $fileNameToStore = $filename . '_' . time() . '.' . $extension;
-                $dir = storage_path('app/public/upload/document/' . $documentType);
+            if (!file_exists($dir)) {
+                mkdir($dir, 0777, true);
+            }
 
-                if (!file_exists($dir)) {
-                    mkdir($dir, 0777, true);
-                }
+            // Delete old encrypted file if exists
+            $oldFilePath = $dir . '/' . $fileToUpdate;
+            if (file_exists($oldFilePath)) {
+                unlink($oldFilePath);
+            }
 
-                $newFile->move($dir, $fileNameToStore);
+            // Upload new encrypted file
+            $originalName = pathinfo($newFile->getClientOriginalName(), PATHINFO_FILENAME);
+            $extension = $newFile->getClientOriginalExtension();
+            $newFileName = md5($originalName . time() . rand()) . '.' . $extension;
+            $newFilePath = $dir . '/' . $newFileName;
 
-                // Update the document field with the new file
-                $claim->$updateField = $fileNameToStore;
+            $encryptedContent = Crypt::encrypt(file_get_contents($newFile));
+            file_put_contents($newFilePath, $encryptedContent);
+
+            // Update DB field
+            if (in_array($documentType, ['insurance','claimform','claimintimation','satisfactionvoucher','consentform','fir','finalbill'])) {
+                // Single file document
+                $claim->$updateField = $newFileName;
             } else {
-                // For multi-file document types, replace the file in the array
+                // Multi-file array
                 $key = array_search($fileToUpdate, $existingFiles);
                 if ($key !== false) {
-                    // Remove the old file from storage
-                    $oldFilePath = storage_path('app/public/upload/document/' . $documentType . '/' . $fileToUpdate);
-                    if (file_exists($oldFilePath)) {
-                        unlink($oldFilePath);
-                    }
-
-                    // Upload the new file
-                    $filenameWithExt = $newFile->getClientOriginalName();
-                    $filename = pathinfo($filenameWithExt, PATHINFO_FILENAME);
-                    $extension = $newFile->getClientOriginalExtension();
-                    $fileNameToStore = $filename . '_' . time() . '.' . $extension;
-                    $dir = storage_path('app/public/upload/document/' . $documentType);
-
-                    if (!file_exists($dir)) {
-                        mkdir($dir, 0777, true);
-                    }
-
-                    $newFile->move($dir, $fileNameToStore);
-
-                    // Update the array with the new file
-                    $existingFiles[$key] = $fileNameToStore;
+                    $existingFiles[$key] = $newFileName;
                 } else {
-                    // For single file document types, or when file is not found in array, treat as new file
-                    $filenameWithExt = $newFile->getClientOriginalName();
-                    $filename = pathinfo($filenameWithExt, PATHINFO_FILENAME);
-                    $extension = $newFile->getClientOriginalExtension();
-                    $fileNameToStore = $filename . '_' . time() . '.' . $extension;
-                    $dir = storage_path('app/public/upload/document/' . $documentType);
-
-                    if (!file_exists($dir)) {
-                        mkdir($dir, 0777, true);
-                    }
-
-                    $newFile->move($dir, $fileNameToStore);
-
-                    // Add new file to array
-                    $existingFiles[] = $fileNameToStore;
+                    $existingFiles[] = $newFileName;
                 }
-
-                // Update the document field with the new files (as an array)
                 $claim->$updateField = json_encode($existingFiles);
             }
 
-            // Save the updated claim
             $claim->save();
 
-            // Log the action
             $this->logClaimAction(
                 $claim,
                 'document_update',
-                'Document updated via customer portal: ' . $documentType,
+                'Document updated securely: ' . $documentType,
                 null,
-                ['document_type' => $documentType, 'old_file' => $fileToUpdate, 'new_file' => $fileNameToStore]
+                ['document_type' => $documentType, 'old_file' => $fileToUpdate, 'new_file' => $newFileName]
             );
 
             return response()->json([
                 'message' => 'Document updated successfully',
-                'new_file' => $fileNameToStore
+                'new_file' => $newFileName
             ]);
+
         } catch (\Exception $e) {
-            Log::error('Document update error: ' . $e->getMessage());
+            Log::error('Secure Document update error: ' . $e->getMessage());
             return response()->json(['error' => 'An error occurred during document update'], 500);
         }
     }
+
     public function addDocument(Request $request)
     {
         try {
             $validator = Validator::make($request->all(), [
                 'claim_id' => 'required|exists:claims,id',
                 'document_type' => 'required|in:aadhaar,rcbook,pan_card,tax_receipt,sales_invoice,dl,insurance,claimform,claimintimation,consentform,satisfactionvoucher,fir,number_plate,finalbill,paymentreceipt,bankdetails,estimatefile',
-                'new_file' => 'required|mimes:jpg,jpeg,png,pdf,mp4,webm|max:10240', // 10MB max file size
+                'new_file' => 'required|mimes:jpg,jpeg,png,pdf,mp4,webm|max:10240',
             ]);
 
             if ($validator->fails()) {
                 return response()->json(['error' => $validator->errors()], 400);
             }
 
-            $claim = Claim::findOrFail($request->input('claim_id'));
-            $documentType = $request->input('document_type');
+            $claim = Claim::findOrFail($request->claim_id);
+            $documentType = $request->document_type;
             $newFile = $request->file('new_file');
 
-            // Get the appropriate field based on document type
             $updateField = $this->getUpdateField($documentType);
 
-            // Retrieve existing files (if any)
             $existingFiles = json_decode($claim->$updateField ?? '[]', true);
+            if (!is_array($existingFiles)) {
+                $existingFiles = [$existingFiles];
+            }
 
-            // Upload the new file
-            $filenameWithExt = $newFile->getClientOriginalName();
-            $filename = pathinfo($filenameWithExt, PATHINFO_FILENAME);
-            $extension = $newFile->getClientOriginalExtension();
-            $fileNameToStore = $filename . '_' . time() . '.' . $extension;
-            $dir = storage_path('app/public/upload/document/' . $documentType);
+            // SECURE DIRECTORY
+            $claimHash = md5($claim->id);
+            $folderCode = $this->getFolderCode($documentType);
+            $dir = config('constant.claim_upload_path') . "/$claimHash/$folderCode";
 
             if (!file_exists($dir)) {
                 mkdir($dir, 0777, true);
             }
 
-            $newFile->move($dir, $fileNameToStore);
+            // Generate unique encrypted filename
+            $originalName = pathinfo($newFile->getClientOriginalName(), PATHINFO_FILENAME);
+            $extension = $newFile->getClientOriginalExtension();
+            $fileNameToStore = md5($originalName . time() . rand()) . '.' . $extension;
+            $filePath = $dir . '/' . $fileNameToStore;
 
-            // For single-file document types, store the new file directly
-            if (in_array($documentType, ['insurance', 'claimform', 'claimintimation', 'satisfactionvoucher', 'consentform', 'fir', 'finalbill'])) {
+            // Encrypt content
+            $encryptedContent = Crypt::encrypt(file_get_contents($newFile));
+            file_put_contents($filePath, $encryptedContent);
+
+            // Store in DB
+            if (in_array($documentType, [
+                'insurance','claimform','claimintimation','satisfactionvoucher',
+                'consentform','fir','finalbill'
+            ])) {
                 $claim->$updateField = $fileNameToStore;
             } else {
-                // For multi-file document types, add the new file to the array
                 $existingFiles[] = $fileNameToStore;
                 $claim->$updateField = json_encode($existingFiles);
             }
 
             $claim->save();
 
-            // Log the action
             $this->logClaimAction(
                 $claim,
                 'document_add',
-                'Document added via customer portal: ' . $documentType,
+                'Secure document added: ' . $documentType,
                 null,
                 ['document_type' => $documentType, 'new_file' => $fileNameToStore]
             );
@@ -2993,69 +3088,80 @@ class ClaimController extends Controller
                 'message' => 'Document added successfully',
                 'new_file' => $fileNameToStore
             ]);
+
         } catch (\Exception $e) {
-            Log::error('Document add error: ' . $e->getMessage());
+            Log::error('Secure addDocument error: ' . $e->getMessage());
             return response()->json(['error' => 'An error occurred during document addition'], 500);
         }
     }
+
+
     public function deleteDocument(Request $request)
     {
         try {
             $validator = Validator::make($request->all(), [
                 'claim_id' => 'required|exists:claims,id',
                 'document_type' => 'required|in:aadhaar,rcbook,pan_card,tax_receipt,sales_invoice,dl,insurance,claimform,claimintimation,consentform,satisfactionvoucher,fir,number_plate,finalbill,paymentreceipt,bankdetails,estimatefile',
-                'file_to_delete' => 'required|string', // filename of the document to be deleted
+                'file_to_delete' => 'required|string',
             ]);
 
             if ($validator->fails()) {
                 return response()->json(['error' => $validator->errors()], 400);
             }
 
-            $claim = Claim::findOrFail($request->input('claim_id'));
-            $documentType = $request->input('document_type');
-            $fileToDelete = $request->input('file_to_delete');
+            $claim = Claim::findOrFail($request->claim_id);
+            $documentType = $request->document_type;
+            $fileToDelete = $request->file_to_delete;
 
-            // Get the appropriate field based on document type
             $updateField = $this->getUpdateField($documentType);
 
-            // Retrieve existing files
             $existingFiles = json_decode($claim->$updateField ?? '[]', true);
+            if (!is_array($existingFiles)) {
+                $existingFiles = [$existingFiles];
+            }
 
-            // Remove the file from storage
-            $filePath = storage_path('app/public/upload/document/' . $documentType . '/' . $fileToDelete);
+            // SECURE PATH
+            $claimHash = md5($claim->id);
+            $folderCode = $this->getFolderCode($documentType);
+            $filePath = config('constant.claim_upload_path') . "/$claimHash/$folderCode/$fileToDelete";
+
+            // Delete secure encrypted file
             if (file_exists($filePath)) {
                 unlink($filePath);
             }
 
-            // For single-file document types, set the field to null
-            if (in_array($documentType, ['insurance', 'claimform', 'claimintimation', 'satisfactionvoucher', 'consentform', 'fir', 'number_plate', 'finalbill'])) {
+            // Single file document
+            if (in_array($documentType, [
+                'insurance','claimform','claimintimation','satisfactionvoucher',
+                'consentform','fir','number_plate','finalbill'
+            ])) {
                 $claim->$updateField = null;
+                $remainingFiles = [];
             } else {
-                // For multi-file document types, remove the file from the array
-                $existingFiles = array_filter($existingFiles, function ($file) use ($fileToDelete) {
+                // Multi-file document
+                $remainingFiles = array_filter($existingFiles, function ($file) use ($fileToDelete) {
                     return $file !== $fileToDelete;
                 });
-
-                $claim->$updateField = json_encode(array_values($existingFiles));
+                $claim->$updateField = json_encode(array_values($remainingFiles));
             }
 
             $claim->save();
 
-            // Log the action
             $this->logClaimAction(
                 $claim,
                 'document_delete',
-                'Document deleted via customer portal: ' . $documentType,
+                'Secure document deleted: ' . $documentType,
                 null,
                 ['document_type' => $documentType, 'deleted_file' => $fileToDelete]
             );
 
             return response()->json([
                 'message' => 'Document deleted successfully',
-                'remaining_files' => $existingFiles
+                'remaining_files' => $remainingFiles
             ]);
+
         } catch (\Exception $e) {
-            Log::error('Document delete error: ' . $e->getMessage());
+            Log::error('Secure deleteDocument error: ' . $e->getMessage());
             return response()->json(['error' => 'An error occurred during document deletion'], 500);
         }
     }
