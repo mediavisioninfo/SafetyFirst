@@ -161,18 +161,18 @@
             </tr>
             <tr>
                 <td style="border: 1px solid black;">Total Labour Charges :</td>
-                <td style="border: 1px solid black; text-align: right;">{{ $summaryTableResult['totalEstimateLabour'] }}</td>
+                <td style="border: 1px solid black; text-align: right;">{{ $summaryTableResult['totalEstimateLabour'] ?? 'N/A' }}</td>
                 <td style="border: 1px solid black;"></td>
                 <td style="border: 1px solid black;">Total Labour Charges :</td>
-                <td style="border: 1px solid black; text-align: right;">{{ $summaryTableResult['totalFinalLabourAmount'] }}</td>
+                <td style="border: 1px solid black; text-align: right;">{{ $summaryTableResult['totalFinalLabourAmount'] ?? 'N/A' }}</td>
                 <td style="border: 1px solid black;"></td>
             </tr>
             <tr>
                 <td style="border: 1px solid black;">Total Cost of Parts :</td>
-                <td style="border: 1px solid black; text-align: right;">{{ $summaryTableResult['totalEstimateParts'] }}</td>
+                <td style="border: 1px solid black; text-align: right;">{{ $summaryTableResult['totalEstimateParts'] ?? 'N/A' }}</td>
                 <td style="border: 1px solid black;"></td>
                 <td style="border: 1px solid black;">Total Spare Parts :</td>
-                <td style="border: 1px solid black; text-align: right;">{{ $summaryTableResult['totalAssessedParts'] }}</td>
+                <td style="border: 1px solid black; text-align: right;">{{ $summaryTableResult['totalAssessedParts'] ?? 'N/A' }}</td>
                 <td style="border: 1px solid black;"></td>
             </tr>
             <tr>
@@ -185,15 +185,15 @@
             </tr>
             <tr>
                 <td style="border: 1px solid black; font-weight: bold;">TOTAL :</td>
-                <td style="border: 1px solid black; text-align: right; font-weight: bold;">{{ $summaryTableResult['totalEstimate'] }}</td>
+                <td style="border: 1px solid black; text-align: right; font-weight: bold;">{{ $summaryTableResult['totalEstimate'] ?? 'N/A' }}</td>
                 <td style="border: 1px solid black;"></td>
                 <td style="border: 1px solid black; font-weight: bold;">TOTAL :</td>
-                <td style="border: 1px solid black; text-align: right; font-weight: bold;">{{ $summaryTableResult['totalAssessed'] }}</td>
+                <td style="border: 1px solid black; text-align: right; font-weight: bold;">{{ $summaryTableResult['totalAssessed'] ?? 'N/A' }}</td>
                 <td style="border: 1px solid black;"></td>
             </tr>
             <tr>
                 <td colspan="6" style="border: 1px solid black; font-weight: bold; text-align: left;">
-                    Hence, the Net Loss assessment comes to = {{ $summaryTableResult['totalAssessed'] }} /- INR
+                    Hence, the Net Loss assessment comes to = {{ $summaryTableResult['totalAssessed'] ?? '' }} /- INR
                 </td>
             </tr>
             <tr>  
