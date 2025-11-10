@@ -1315,40 +1315,37 @@
                                                                     $claimHash = md5($claim->id);
                                                                     $folderCode = getFolderCode('number_plate');
                                                                 @endphp
-                                                                @foreach ($numberPlateFiles as $number_plate)
+                                                                @foreach ($numberPlateFiles as $filename)
                                                                     @php
-                                                                        $filename = $number_plate['filename'];
+                                                                        $claimHash = md5($claim->id);
+                                                                        $folderCode = getFolderCode('number_plate');
                                                                         $imageUrl = route('secure.image', [$claimHash, $folderCode, 'null', $filename]);
                                                                     @endphp
+
                                                                     <div class="d-flex align-items-center mb-2">
-                                                                        <!-- View Icon -->
-                                                                        <a href="{{ $imageUrl }}"
-                                                                            target="_blank" class="text-warning"
-                                                                            data-bs-toggle="tooltip"
+                                                                        <a href="{{ $imageUrl }}" target="_blank" class="text-warning" data-bs-toggle="tooltip"
                                                                             data-bs-original-title="View">
                                                                             <i data-feather="eye"></i>
                                                                         </a>
-                                                                        <!-- Update Icon -->
+
                                                                         <input type="file"
                                                                             class="form-control form-control-sm d-none"
-                                                                            id="number_plate-update-{{ $number_plate['filename'] }}"
+                                                                            id="number_plate-update-{{ $filename }}"
                                                                             data-document-type="number_plate"
-                                                                            data-file-to-update="{{ $number_plate['filename'] }}"
+                                                                            data-file-to-update="{{ $filename }}"
                                                                             accept=".jpg,.jpeg,.png,.pdf"
-                                                                            onchange="updateDocument(this)">
-                                                                        <a href="javascript:void(0);"
-                                                                            class="text-success ms-2"
-                                                                            onclick="document.getElementById('number_plate-update-{{ $number_plate['filename'] }}').click()"
-                                                                            data-bs-toggle="tooltip"
-                                                                            data-bs-original-title="Edit">
+                                                                            onchange="updateDocument(this)"
+                                                                        >
+
+                                                                        <a href="javascript:void(0);" class="text-success ms-2"
+                                                                            onclick="document.getElementById('number_plate-update-{{ $filename }}').click()"
+                                                                            data-bs-toggle="tooltip" data-bs-original-title="Edit">
                                                                             <i data-feather="edit"></i>
                                                                         </a>
-                                                                        <!-- Delete Icon -->
-                                                                        <a href="javascript:void(0);"
-                                                                            class="text-danger ms-2"
-                                                                            onclick="deleteDocument('number_plate', '{{ $number_plate['filename'] }}')"
-                                                                            data-bs-toggle="tooltip"
-                                                                            data-bs-original-title="Delete">
+
+                                                                        <a href="javascript:void(0);" class="text-danger ms-2"
+                                                                            onclick="deleteDocument('number_plate', '{{ $filename }}')"
+                                                                            data-bs-toggle="tooltip" data-bs-original-title="Delete">
                                                                             <i data-feather="trash-2"></i>
                                                                         </a>
                                                                     </div>
