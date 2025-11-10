@@ -18,7 +18,7 @@
             <td colspan="1" style="font-size: 45px; font-weight: bold;">
                 <img src="{{ $src }}" alt="Safety First Logo" style="width: 150px; height: auto; margin-right: 10px;">   
             </td>
-            <td colspan="1" style="font-size: 12px;">
+            <td colspan="1" style="font-size: 12px; text-align: right;">
                 <b>GSTIN: 08ABIFS2643G2Z2</b>
                 <br>
                 <b>Cell off: +91 98930 55855</b>
@@ -83,9 +83,15 @@
             <td style="font-weight: bold;">Policy No.</td>
             <td> {{ $claim->policy_number }} </td>
             <td style="font-weight: bold;">Validity :</td>
-            <td>{{ \Carbon\Carbon::parse($insuranceDetail->insurance_start_date)->format('Y-m-d') }}
-                TO
-                {{ \Carbon\Carbon::parse($insuranceDetail->insurance_expiry_date)->format('Y-m-d') }}
+            <td style="font-weight: bold; background-color: #c0c0c0;">
+                @if($insuranceDetail)
+                    Validity:
+                    {{ \Carbon\Carbon::parse($insuranceDetail->insurance_start_date)->format('Y-m-d') }}
+                    TO
+                    {{ \Carbon\Carbon::parse($insuranceDetail->insurance_expiry_date)->format('Y-m-d') }}
+                @else
+                    Validity: Not Available
+                @endif
             </td>
             <td style="font-weight: bold;">IDV :</td>
             <td>560,000.00</td>
@@ -96,7 +102,7 @@
             <td style="font-weight: bold;">Claim No.</td>
             <td>{{ $claim->claim_id }}</td>
             <td style="font-weight: bold;">PACKAGE POLICY</td>
-            <td>{{ $insuranceDetail->policy_type }}</td>
+            <td>{{ $insuranceDetail->policy_type ?? 'N/A' }}</td>
         </tr>
         <tr>
             <td style="font-weight: bold;">Insured :-</td>
@@ -104,8 +110,8 @@
         </tr>
         <tr>
             <td style="font-weight: bold;">Address</td>
-            <td colspan="4">{{ $insuranceDetail->insured_address }}</td>
-            <td style="font-weight: bold;">M.NO. {{ $insuranceDetail->mobile }}</td>
+            <td colspan="4">{{ $insuranceDetail->insured_address ?? 'N/A' }}</td>
+            <td style="font-weight: bold;">M.NO. {{ $insuranceDetail->mobile ?? 'N/A' }}</td>
         </tr>
     </table>
 
