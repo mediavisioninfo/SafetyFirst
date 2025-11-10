@@ -19,7 +19,7 @@
             <td colspan="1" style="font-size: 45px; font-weight: bold;">
                 <img src="{{ $src }}" alt="Safety First Logo" style="width: 150px; height: auto; margin-right: 10px;">   
             </td>
-            <td colspan="1" style="font-size: 12px;">
+            <td colspan="1" style="font-size: 12px; text-align: right;">
                  <b>GSTIN: 08ABIFS2643G2Z2</b>
                 <br>
                 <b>Cell off: +91 98930 55855</b>
@@ -75,17 +75,22 @@
         <tr>
             <td style="font-weight: bold;  background-color: #c0c0c0;">Policy/Cover Note No.: {{ $claim->policy_number }}</td>
             <td style="font-weight: bold; background-color: #c0c0c0;">
-                Validity: {{ \Carbon\Carbon::parse($insuranceDetail->insurance_start_date)->format('Y-m-d') }}
-                TO
-                {{ \Carbon\Carbon::parse($insuranceDetail->insurance_expiry_date)->format('Y-m-d') }}
+                @if($insuranceDetail)
+                    Validity:
+                    {{ \Carbon\Carbon::parse($insuranceDetail->insurance_start_date)->format('Y-m-d') }}
+                    TO
+                    {{ \Carbon\Carbon::parse($insuranceDetail->insurance_expiry_date)->format('Y-m-d') }}
+                @else
+                    Validity: Not Available
+                @endif
             </td>
         </tr>
         <tr>
-            <td style="font-weight: bold;">Insured Name: {{ $insuranceDetail->insured_name }}</td>
+            <td style="font-weight: bold;">Insured Name: {{ $insuranceDetail->insured_name ?? 'N/A' }}</td>
         </tr>
         <tr>
-            <td style="font-weight: bold;  background-color: #c0c0c0;">Insured Address: {{ $insuranceDetail->insured_address }}</td>
-            <td style="font-weight: bold;  background-color: #c0c0c0;">Phone No.: {{ $insuranceDetail->mobile }}</td>
+            <td style="font-weight: bold;  background-color: #c0c0c0;">Insured Address: {{ $insuranceDetail->insured_address ?? 'N/A'}}</td>
+            <td style="font-weight: bold;  background-color: #c0c0c0;">Phone No.: {{ $insuranceDetail->mobile ?? 'N/A' }}</td>
         </tr>
 
     </table>
