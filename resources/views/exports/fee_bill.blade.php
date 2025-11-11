@@ -61,10 +61,10 @@
             <td>To,</td>
         </tr>
         <tr>
-            <td colspan="1" style="font-weight: bold;">UNITED INDIA INSURANCE COMPANY LTD.</td>
+            <td colspan="1" style="font-weight: bold;">{{ $insuranceCompanyName }} LTD.</td>
         </tr>
         <tr>
-            <td colspan="1" style="font-weight: bold;">CLAIM HUB, KANPUR</td>
+            <td colspan="1" style="font-weight: bold;">CLAIM HUB, {{ $cityName }}</td>
         </tr>
     </table>
     <table style="width: 100%; border-collapse: collapse; border: 1px solid black;">
