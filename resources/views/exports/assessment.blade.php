@@ -216,7 +216,7 @@
         The loss was proximately caused by an insured peril, and none of the exclusions under the policy had operated to bring about the loss.</td></tr>
         <tr><td colspan="8" style="border: 1px solid black; text-align: left;"> 2. The R.C. and the D.L. were verified from the original documents and found in order.
             The photocopies of the same are enclosed with this survey report.
-            <strong>Repair Bill Received on Dt.</strong></td></tr>
+            <strong>Repair Bill Received on Dt. {{ $claim->bill_date }}</strong></td></tr>
         <tr><td colspan="8" style="border: 1px solid black; text-align: left;"><strong>3. Payment to Insured.</strong></td></tr>
     </table>
 
