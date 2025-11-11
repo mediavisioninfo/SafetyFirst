@@ -7,6 +7,8 @@ use App\Models\ProfessionalFee;
 use App\Models\VehicleRegistration;
 use App\Models\DlDetail;
 use App\Models\InsuranceDetail;
+use App\Models\City;
+use App\Models\InsuranceCompany;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class ClaimReportPdfExport
@@ -24,10 +26,22 @@ class ClaimReportPdfExport
         $claim = Claim::find($this->claimId);
         $insuranceDetail = InsuranceDetail::where('claim_id', $this->claimId)->first();
 
+        // Fetch city name
+        $cityName = null;
+        if (!empty($claim->city_id)) {
+            $cityName = City::where('id', $claim->city_id)->value('name');
+        }
+
+        // Fetch insurance company name
+        $insuranceCompanyName = null;
+        if (!empty($claim->insurance_company_id)) {
+            $insuranceCompanyName = InsuranceCompany::where('id', $claim->insurance_company_id)->value('name');
+        }
+
         // Sheet 1: Fee Bill
         $feesBillData = ProfessionalFee::where('claim_id', $this->claimId)->first();
         $forExcel = false; // set to false if rendering for PDF
-        $feeBillHtml = view('exports.fee_bill', compact('feesBillData', 'claim','forExcel','insuranceDetail'))->render();
+        $feeBillHtml = view('exports.fee_bill', compact('feesBillData', 'claim','forExcel','insuranceDetail','cityName','insuranceCompanyName'))->render();
 
         // Sheet 2: Particulars
         $vehicleRegistrationData = VehicleRegistration::where('claim_id', $this->claimId)->first();
